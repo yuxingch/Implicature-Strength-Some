@@ -43,7 +43,7 @@ class RatingModel(object):
 
     def __init__(self, output_dir, load_checkpoint="", is_train=True):
         if is_train:
-            self.model_dir = os.path.join(output_dir, 'Model')
+            self.model_dir = os.path.join(output_dir, 'Model_Decay')
             self.log_dir = os.path.join(output_dir, 'Log')
             mkdir_p(self.model_dir)
             mkdir_p(self.log_dir)
@@ -53,6 +53,7 @@ class RatingModel(object):
         self.total_epoch = 100
         self.load_checkpoint = load_checkpoint
         self.lr = 0.01
+        self.lr_decay_per_epoch = 10
     
     def load_network(self):
         from net import RateNet
@@ -69,7 +70,8 @@ class RatingModel(object):
     def train(self, word_embs, labels):
         labels = np.expand_dims(labels, axis=1) 
         RNet = self.load_network()
-        optimizer = optim.Adam(RNet.parameters(), lr=self.lr, betas=(0.9, 0.999))
+        lr = self.lr
+        optimizer = optim.Adam(RNet.parameters(), lr=lr, betas=(0.9, 0.999))
         # print(word_embs.size())
         count = 0
         epoch = 0
@@ -79,6 +81,14 @@ class RatingModel(object):
             batch_inds = list(BatchSampler(SequentialSampler(word_embs),
                                            batch_size=self.batch_size,
                                            drop_last=True))
+
+            if epoch % self.lr_decay_per_epoch == 0:
+                # update learning rate
+                lr *= 0.8
+                print(f'learning rate updated: {lr}')
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] = lr
+            
             for i, inds in enumerate(batch_inds, 0):
                 real_labels = labels[inds]
                 curr_batch = word_embs[inds]
