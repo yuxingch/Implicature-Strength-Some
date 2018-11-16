@@ -43,8 +43,8 @@ class RatingModel(object):
 
     def __init__(self, output_dir, load_checkpoint="", is_train=True):
         if is_train:
-            self.model_dir = os.path.join(output_dir, 'Model')
-            self.log_dir = os.path.join(output_dir, 'Log')
+            self.model_dir = os.path.join(output_dir, 'Model_2_Sentences')
+            self.log_dir = os.path.join(output_dir, 'Log/3')
             mkdir_p(self.model_dir)
             mkdir_p(self.log_dir)
             self.summary_writer = tf.summary.FileWriter(self.log_dir)
@@ -53,6 +53,7 @@ class RatingModel(object):
         self.total_epoch = 100
         self.load_checkpoint = load_checkpoint
         self.lr = 0.01
+        self.lr_decay_per_epoch = 10
     
     def load_network(self):
         from net import RateNet
@@ -69,7 +70,8 @@ class RatingModel(object):
     def train(self, word_embs, labels):
         labels = np.expand_dims(labels, axis=1) 
         RNet = self.load_network()
-        optimizer = optim.Adam(RNet.parameters(), lr=self.lr, betas=(0.9, 0.999))
+        lr = self.lr
+        optimizer = optim.Adam(RNet.parameters(), lr=lr, betas=(0.9, 0.999))
         # print(word_embs.size())
         count = 0
         epoch = 0
@@ -79,6 +81,14 @@ class RatingModel(object):
             batch_inds = list(BatchSampler(SequentialSampler(word_embs),
                                            batch_size=self.batch_size,
                                            drop_last=True))
+
+            if epoch % self.lr_decay_per_epoch == 0:
+                # update learning rate
+                lr *= 0.8
+                print(f'learning rate updated: {lr}')
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] = lr
+            
             for i, inds in enumerate(batch_inds, 0):
                 real_labels = labels[inds]
                 curr_batch = word_embs[inds]
@@ -105,6 +115,28 @@ class RatingModel(object):
             if epoch % 10 == 0:
                 save_model(RNet, epoch, self.model_dir)
         save_model(RNet, self.total_epoch, self.model_dir)
+    
+    def evaluate(self, word_embs, max_diff, min_value):
+        RNet = self.load_network()
+        RNet.eval()
+
+        num_items = word_embs.shape[0]
+        # print(num_items)
+        batch_size = min(num_items, self.batch_size)
+
+        rating_lst = []
+        count = 0
+        while count < num_items:
+            iend = count + batch_size
+            if iend > num_items:
+                iend = num_items
+                # count = num_items - batch_size
+            curr_batch = Variable(word_embs[count:iend])
+            output_scores = RNet(curr_batch)
+            for curr_score in output_scores.data.tolist():
+                rating_lst.append(curr_score[0]*max_diff+min_value)
+            count += batch_size
+        return np.array(rating_lst)
 
 
 def get_word(w):
@@ -114,11 +146,13 @@ def get_word(w):
         result = _UNK
     return result
 
+
 def split_by_whitespace(sentence):
     words = []
-    for space_separated_fragment in sentence.strip().split():
+    for space_separated_fragment in sentence.strip('.').strip().split():
         words.extend(re.split(" ", space_separated_fragment))
     return [w for w in words if w]
+
 
 def get_sentence(s, max_len=40):
     s = re.sub('[^a-zA-Z0-9 \n\.]', '', s)
@@ -132,7 +166,68 @@ def get_sentence(s, max_len=40):
         raw_tokens = raw_tokens[:max_len]
         lst = [get_word(w.lower()) for w in raw_tokens]
     all_embs = torch.stack(lst)
-    return torch.mean(all_embs, 0) # embedding_size
+    return torch.mean(all_embs, 0), raw_tokens  # embedding_size
+
+
+def parse_paragraph(p, target_tokens):
+    ss = re.sub('[^a-zA-Z0-9 \n\.]', '', p).strip('.').split('.')
+    ls = list(filter(None, ss))
+    total_len = len(ls)
+    next_tokens = None
+    next_tokens_II = None
+
+    if total_len > 0:
+        next_tokens = split_by_whitespace(ls[0])
+    if total_len > 1:
+        next_tokens_II = split_by_whitespace(ls[1])
+
+    if next_tokens:
+        lst_next = [get_word(w.lower()) for w in next_tokens]
+        next_embs = torch.stack(lst_next)
+        next_mean = torch.mean(next_embs, 0)
+    else:
+        next_mean = torch.FloatTensor(1, GLOVE_DIM).zero_()
+    if next_tokens_II:
+        lst_next_II = [get_word(w.lower()) for w in next_tokens_II]
+        next_embs_II = torch.stack(lst_next_II)
+        next_mean_II = torch.mean(next_embs_II, 0)
+    else:
+        next_mean_II = torch.FloatTensor(1, GLOVE_DIM).zero_()
+    return next_mean, next_mean_II
+
+# def parse_paragraph(p, target_tokens):
+#     ss = re.sub('[^a-zA-Z0-9 \n\.]', '', p).strip('.').split('.')
+#     ls = list(filter(None, ss))
+#     total_len = len(ls)
+#     prev_tokens = None
+#     next_tokens = None
+#     ptr = 0
+#     found = False
+#     for s in ls:
+#         curr_tokens = split_by_whitespace(s)
+#         print(curr_tokens, target_tokens)
+#         if curr_tokens == target_tokens:
+#             print("hi", ptr)
+#             if (ptr+1) < total_len:
+#                 next_tokens = split_by_whitespace(ls[ptr+1])
+#                 found = True
+#             break
+#         prev_tokens = curr_tokens
+#         ptr += 1
+
+#     if prev_tokens and found:
+#         lst_prev = [get_word(w.lower()) for w in prev_tokens]
+#         prev_embs = torch.stack(lst_prev)
+#         prev_mean = torch.mean(prev_embs, 0)
+#     else:
+#         prev_mean = torch.IntTensor(1, GLOVE_DIM).zero_()
+#     if next_tokens:
+#         lst_next = [get_word(w.lower()) for w in next_tokens]
+#         next_embs = torch.stack(lst_next)
+#         next_mean = torch.mean(next_embs, 0)
+#     else:
+#         next_mean = torch.IntTensor(1, GLOVE_DIM).zero_()
+#     return prev_mean, next_mean
 
 
 def main():
