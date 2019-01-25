@@ -22,10 +22,8 @@ class RateNet(nn.Module):
 
         self.get_score = nn.Sequential(
             nn.Linear(32, 1, bias=True))
-    
+
     def forward(self, word_embs):
-        # print(word_embs.size())
         h = self.fc1(word_embs)
         h = self.fc2(h)
         return self.get_score(h)
-        

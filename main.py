@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import torch
 from collections import defaultdict
 from models import split_by_whitespace, RatingModel, get_sentence
-from models import parse_paragraph
+from models import parse_paragraph_2, parse_paragraph_3
 import torch
 # from vocab import get_glove, build_char_dict
 
@@ -147,50 +147,95 @@ def main():
     # normalize the values
     normalized_labels = []
     max_diff = curr_max - curr_min
+    keys = []
     for (k, v) in labels.items():
+        keys.append(k)
         original_labels.append(float(v))
         labels[k] = (float(v) - curr_min) / max_diff
         normalized_labels.append(labels[k])
-
+    print(keys)
     content_embs = []
     plain_embs = []
-    for (k, v) in contents.items():
-        curr_emb, target_tokens = get_sentence(v[0])
-        next_emb, next_emb_2 = parse_paragraph(contexts[k][0], target_tokens)
-        if torch.eq(next_emb, NOT_EXIST).all() and torch.eq(next_emb_2, NOT_EXIST).all():
-            content_embs.append(curr_emb)
-        elif torch.eq(next_emb, NOT_EXIST).all():
-            content_embs.append(curr_emb*np.float64(0.6)+next_emb_2*np.float64(0.4))
-        elif torch.eq(next_emb_2, NOT_EXIST).all():
-            content_embs.append(curr_emb*np.float64(0.6)+next_emb*np.float64(0.4))
-        else:
-            content_embs.append(curr_emb*np.float64(0.6)+next_emb*np.float64(0.2)+next_emb_2*np.float64(0.2))
-        # print(curr_emb, content_embs[len(content_embs)-1])
-        plain_embs.append(curr_emb)
+    content_embs = []
+    for (k, v) in contents.items():  # <-- only the target
+        curr_emb, _ = get_sentence(v[0])
+        content_embs.append(curr_emb)
+
+    # for (k, v) in contents.items():  # <-- Two Sentences
+    #     curr_emb, target_tokens = get_sentence(v[0])
+    #     next_emb, next_emb_2 = parse_paragraph_2(contexts[k][0], target_tokens)
+    #     if torch.eq(next_emb, NOT_EXIST).all() and torch.eq(next_emb_2, NOT_EXIST).all():
+    #         content_embs.append(curr_emb)
+    #     # elif torch.eq(next_emb, NOT_EXIST).all():
+    #     #     content_embs.append(curr_emb*np.float64(0.6)+next_emb_2*np.float64(0.4))
+    #     elif torch.eq(next_emb_2, NOT_EXIST).all():
+    #         content_embs.append(curr_emb*np.float64(0.6)+next_emb*np.float64(0.4))
+    #     else:
+    #         content_embs.append(curr_emb*np.float64(0.6)+next_emb*np.float64(0.2)+next_emb_2*np.float64(0.2))
+    #     # print(curr_emb, content_embs[len(content_embs)-1])
+    #     plain_embs.append(curr_emb)
+
+    # for (k, v) in contents.items():  # <-- Three Sentences
+    #     keys.append(k)
+    #     curr_emb, target_tokens = get_sentence(v[0])
+    #     next_emb, next_emb_2, next_emb_3 = parse_paragraph_3(contexts[k][0], target_tokens)
+    #     if torch.eq(next_emb, NOT_EXIST).all() and torch.eq(next_emb_2, NOT_EXIST).all() and torch.eq(next_emb_3, NOT_EXIST).all():
+    #         content_embs.append(curr_emb)
+    #     elif torch.eq(next_emb_2, NOT_EXIST).all() and torch.eq(next_emb_3, NOT_EXIST).all():
+    #         # content_embs.append(curr_emb*np.float64(1.0/2)+next_emb*np.float64(1.0/2))
+    #         content_embs.append(curr_emb*np.float64(0.6)+next_emb*np.float64(0.4))
+    #     elif torch.eq(next_emb_3, NOT_EXIST).all():
+    #         # content_embs.append(curr_emb*np.float64(1.0/2)+next_emb*np.float64(1.0/2/2)+next_emb_2*np.float64(1.0/2/2))
+    #         content_embs.append(curr_emb*np.float64(0.6)+next_emb*np.float64(0.2)+next_emb_2*np.float64(0.2))
+    #     else:
+    #         # content_embs.append(curr_emb*np.float64(1.0/2)+next_emb*np.float64(1.0/2/2)+next_emb_2*np.float64(1.0/2/2/2)+next_emb_3*np.float(1.0/2/2/2))
+    #         content_embs.append(curr_emb*np.float64(0.6)+next_emb*np.float64(0.2)+next_emb_2*np.float64(0.2/2)+next_emb_3*np.float(0.2/2))
+    #     # print(curr_emb, content_embs[len(content_embs)-1])
+    #     plain_embs.append(curr_emb)
 
     # r_model = RatingModel("./")
     # r_model.train(torch.stack(content_embs), np.array(normalized_labels))
 
     # evaluate
-    r_model = RatingModel("./", "./Model/RNet_epoch_100.pth", is_train=False)
-    preds = r_model.evaluate(torch.stack(plain_embs), max_diff, curr_min)
+    # r_model_content = RatingModel("./", "./Model_3S/RNet_epoch_100.pth", is_train=False)
+    # preds_content = r_model_content.evaluate(torch.stack(content_embs), max_diff, curr_min)
 
-    r_model_content = RatingModel("./", "./Model_2_Sentences/RNet_epoch_100.pth", is_train=False)
-    preds_content = r_model_content.evaluate(torch.stack(content_embs), max_diff, curr_min)
+    r_model_decay = RatingModel("./", "./Model_0S/RNet_epoch_500.pth", is_train=False)
+    preds_decay = r_model_decay.evaluate(torch.stack(content_embs), max_diff, curr_min)
 
-    r_model_decay = RatingModel("./", "./Model_Decay/RNet_epoch_100.pth", is_train=False)
-    preds_decay = r_model_decay.evaluate(torch.stack(plain_embs), max_diff, curr_min)
+    # i = 0
+    # for i in range(len(keys)):
+    #     if preds_content[i] < 4 and preds_content[i] > 2 and original_labels[i] > 1 and original_labels[i] < 5:
+    #         print(keys[i], preds_content[i], original_labels[i])
+
     # print(len(original_labels), preds.shape, len(content_embs))
-    # x_axis = np.arange(len(original_labels))
-    # plt.scatter(x_axis[:200], np.array(original_labels)[:200], s=8)
-    # plt.scatter(x_axis[:200], preds[:200], s=8)
-    # plt.plot(x_axis[:200], preds[:200]-np.array(original_labels)[:200], c='r')
-    plt.scatter(preds_content, np.array(original_labels), s=6, c='r')
-    plt.scatter(preds_decay, np.array(original_labels), s=6, c='b')
-    plt.scatter(preds, np.array(original_labels), s=6, c='y')
-    # plt.scatter(x_axis, preds, s=8)
-    # plt.plot(x_axis, preds-np.array(original_labels), c='r')
-    plt.show()
+    # print(np.corrcoef(preds_decay, np.array(original_labels)))
+    x_axis = np.arange(len(original_labels))
+    # print(curr_max, curr_min)
+    print(len(keys), len(original_labels))
+
+    f = open('./predictions.csv', 'w')
+    head_line = "Item_ID\toriginal_mean\tpredicted\n"
+    f.write(head_line)
+    for i in range(len(keys)):
+        k = keys[i]
+        ori = original_labels[i]
+        pre = preds_decay[i]
+        curr_line = k + '\t' + format(ori) + '\t' + format(pre)
+        f.write(curr_line+"\n")
+    f.close()
+    # plt.subplot(2, 1, 1)
+    # plt.scatter(preds_content, np.array(original_labels), s=5, c='r', label="100 epochs")
+    # plt.scatter(preds_decay, np.array(original_labels), s=5, c='b', label="500 epochs")
+    # plt.xlim(1, 7)
+    # plt.ylim(1, 7)
+    # plt.xlabel('predictions')
+    # plt.ylabel('real ratings')
+    # function = [i for i in range(1, 1001, 7)]
+    # plt.plot(function, function, c='k', label="real rating = preds")
+    # plt.legend()
+    # plt.title("Target sentence only, implicature strength rating")
+    # plt.show()
     return
 
 if __name__ == "__main__":
