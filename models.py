@@ -41,24 +41,24 @@ def write_summary(value, tag, summary_writer, global_step):
 
 class RatingModel(object):
 
-    def __init__(self, output_dir, load_checkpoint="", is_train=True):
+    def __init__(self, output_dir, sn=0, load_checkpoint="", is_train=True):
         if is_train:
-            self.model_dir = os.path.join(output_dir, 'Model_2_Sentences')
-            self.log_dir = os.path.join(output_dir, 'Log/3')
+            self.model_dir = os.path.join(output_dir, 'Model_' + str(sn) + 'S')
+            self.log_dir = os.path.join(output_dir, 'Log_' + str(sn) + 'S')
             mkdir_p(self.model_dir)
             mkdir_p(self.log_dir)
             self.summary_writer = tf.summary.FileWriter(self.log_dir)
         
         self.batch_size = 32
-        self.total_epoch = 100
+        self.total_epoch = 160
         self.load_checkpoint = load_checkpoint
-        self.lr = 0.01
+        self.lr = 0.02
         self.lr_decay_per_epoch = 10
     
     def load_network(self):
         from net import RateNet
         print('initializing neural net')
-        RNet = RateNet(100)
+        RNet = RateNet(GLOVE_DIM)
         RNet.apply(weights_init)
 
         if self.load_checkpoint != "":
@@ -75,6 +75,7 @@ class RatingModel(object):
         # print(word_embs.size())
         count = 0
         epoch = 0
+        save_model(RNet, epoch, self.model_dir)
         while (epoch < self.total_epoch):
             epoch += 1
             start_t = time.time()
@@ -108,14 +109,14 @@ class RatingModel(object):
                 count += 1
                 if i % 10 == 0:
                     write_summary(loss, 'loss', self.summary_writer, count)
-                
+
             end_t = time.time()
             print(f'[{epoch}/{self.total_epoch}][{i}/{len(batch_inds)-1}] Loss: {loss:.4f}'
                     f' Total Time: {(end_t-start_t):.2f}sec')
-            if epoch % 10 == 0:
+            if epoch % 20 == 0 or epoch == 1:
                 save_model(RNet, epoch, self.model_dir)
         save_model(RNet, self.total_epoch, self.model_dir)
-    
+
     def evaluate(self, word_embs, max_diff, min_value):
         RNet = self.load_network()
         RNet.eval()
@@ -169,17 +170,18 @@ def get_sentence(s, max_len=40):
     return torch.mean(all_embs, 0), raw_tokens  # embedding_size
 
 
-def parse_paragraph(p, target_tokens):
-    ss = re.sub('[^a-zA-Z0-9 \n\.]', '', p).strip('.').split('.')
+def parse_paragraph_2(p, target_tokens):
+    modified_p = re.sub('#', '.', p)
+    ss = re.sub('[^a-zA-Z0-9 \n\.]', '', modified_p).strip('.').split('.')
     ls = list(filter(None, ss))
     total_len = len(ls)
     next_tokens = None
     next_tokens_II = None
 
     if total_len > 0:
-        next_tokens = split_by_whitespace(ls[0])
+        next_tokens = split_by_whitespace(ls[total_len-1])
     if total_len > 1:
-        next_tokens_II = split_by_whitespace(ls[1])
+        next_tokens_II = split_by_whitespace(ls[total_len-2])
 
     if next_tokens:
         lst_next = [get_word(w.lower()) for w in next_tokens]
@@ -194,6 +196,43 @@ def parse_paragraph(p, target_tokens):
     else:
         next_mean_II = torch.FloatTensor(1, GLOVE_DIM).zero_()
     return next_mean, next_mean_II
+
+
+def parse_paragraph_3(p, target_tokens):  # <--- 3
+    modified_p = re.sub('#', '.', p)
+    ss = re.sub('[^a-zA-Z0-9 \n\.]', '', modified_p).strip('.').split('.')
+    # print(ss)
+    ls = list(filter(None, ss))
+    total_len = len(ls)
+    next_tokens = None
+    next_tokens_II = None
+
+    if total_len > 0:
+        next_tokens = split_by_whitespace(ls[total_len-1])
+    if total_len > 1:
+        next_tokens_II = split_by_whitespace(ls[total_len-2])
+    if total_len > 2:
+        next_tokens_III = split_by_whitespace(ls[total_len-3])
+    # print(next_tokens, next_tokens_II, next_tokens_III)
+    if next_tokens:
+        lst_next = [get_word(w.lower()) for w in next_tokens]
+        next_embs = torch.stack(lst_next)
+        next_mean = torch.mean(next_embs, 0)
+    else:
+        next_mean = torch.FloatTensor(1, GLOVE_DIM).zero_()
+    if next_tokens_II:
+        lst_next_II = [get_word(w.lower()) for w in next_tokens_II]
+        next_embs_II = torch.stack(lst_next_II)
+        next_mean_II = torch.mean(next_embs_II, 0)
+    else:
+        next_mean_II = torch.FloatTensor(1, GLOVE_DIM).zero_()
+    if next_tokens_III:
+        lst_next_III = [get_word(w.lower()) for w in next_tokens_III]
+        next_embs_III = torch.stack(lst_next_III)
+        next_mean_III = torch.mean(next_embs_III, 0)
+    else:
+        next_mean_III = torch.FloatTensor(1, GLOVE_DIM).zero_()   
+    return next_mean, next_mean_II, next_mean_III
 
 # def parse_paragraph(p, target_tokens):
 #     ss = re.sub('[^a-zA-Z0-9 \n\.]', '', p).strip('.').split('.')
