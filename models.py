@@ -10,8 +10,10 @@ import re
 import os
 import time
 import numpy as np
+import matplotlib.pyplot as plt
 
 import tensorflow as tf
+import visdom
 
 from utils import mkdir_p, weights_init, save_model
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -48,13 +50,13 @@ class RatingModel(object):
             mkdir_p(self.model_dir)
             mkdir_p(self.log_dir)
             self.summary_writer = tf.summary.FileWriter(self.log_dir)
-        
+
         self.batch_size = 32
         self.total_epoch = 160
         self.load_checkpoint = load_checkpoint
         self.lr = 0.02
         self.lr_decay_per_epoch = 10
-    
+
     def load_network(self):
         from net import RateNet
         print('initializing neural net')
@@ -64,7 +66,7 @@ class RatingModel(object):
         if self.load_checkpoint != "":
             RNet.load_state_dict(build_state_dict(self.load_checkpoint))
             print(f'Load from: {self.load_checkpoint}')
-        
+
         return RNet
 
     def train(self, word_embs, labels):
@@ -89,7 +91,7 @@ class RatingModel(object):
                 print(f'learning rate updated: {lr}')
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = lr
-            
+
             for i, inds in enumerate(batch_inds, 0):
                 real_labels = labels[inds]
                 curr_batch = word_embs[inds]
@@ -138,6 +140,15 @@ class RatingModel(object):
                 rating_lst.append(curr_score[0]*max_diff+min_value)
             count += batch_size
         return np.array(rating_lst)
+
+    def analyze(self):
+        RNet = self.load_network()
+        RNet.eval()
+
+        w = RNet.fc1[0].weight.data.numpy()
+        w_max, w_min = np.amax(w), np.amin(w)
+        w_normalized = (w - w_min) / (w_max - w_min) * 255.0
+        return w_normalized
 
 
 def get_word(w):

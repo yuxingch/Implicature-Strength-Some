@@ -60,7 +60,40 @@ def main():
     some_database = "./some_database.csv"
     curr_path = "./datasets/seed_" + str(opt.seed_nm)
     is_train = True
-    if opt.mode == 'train':
+    if opt.mode == 'analyze':
+        # pass
+        eval_path = "./emb" + str(GLOVE_DIM) + "_" + opt.t + "_" + str(opt.seed_nm)
+        r_model_analyze = None
+        if opt.random_vector:
+            eval_path += "_random"
+            load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
+        else:
+            load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
+        epoch_to_analyze = [0, 20, 40, 60, 80, 100]
+        epoch_npy = []
+        for epoch in epoch_to_analyze:
+            r_model_analyze = RatingModel(eval_path, load_checkpoint=load_path + "/RNet_epoch_" + str(epoch) + ".pth", is_train=False)
+            epoch_npy.append(r_model_analyze.analyze())
+        # fig = plt.figure(figsize=(64, GLOVE_DIM))
+        # fig = plt.figure(figsize=(32, 64))
+        fig = plt.figure(figsize=(1, 32))
+        columns = 2
+        rows = int(len(epoch_to_analyze) / columns)
+        ax = []
+        for i in range(1, columns*rows+1):
+            img = epoch_npy[i-1]
+            column_sum = np.sum(img, axis=0)
+            # print(column_sum.argsort())#[-4:][::-1])
+            column_max, column_min = np.argmax(column_sum), np.argmin(column_sum)
+            ax.append(fig.add_subplot(rows, columns, i))
+            ax[-1].set_title(opt.t + "_" + str(GLOVE_DIM) + "_epoch" + str(epoch_to_analyze[i-1]) + "_score")
+            ax[-1].axvline(x=column_max, color='maroon')
+            ax[-1].axvline(x=column_min, color='lightsteelblue')
+            plt.imshow(img)
+            print(i, np.mean(img))
+        plt.show()
+        return
+    elif opt.mode == 'train':
         load_db = curr_path + "/train_db.csv"
     elif opt.mode == 'eval':
         load_db = curr_path + "/eval_db.csv"
@@ -159,7 +192,7 @@ def main():
             preds_decay_0 = r_model_decay_0.evaluate(fake_embs, max_diff, curr_min)
         else:
             load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
-            r_model_decay = RatingModel(eval_path, load_checkpoint=load_path + "/RNet_epoch_60.pth", is_train=False)
+            r_model_decay = RatingModel(eval_path, load_checkpoint=load_path + "/RNet_epoch_120.pth", is_train=False)
             preds_decay = r_model_decay.evaluate(torch.stack(content_embs), max_diff, curr_min)
             r_model_decay_1 = RatingModel(eval_path, load_checkpoint=load_path + "/RNet_epoch_1.pth", is_train=False)
             preds_decay_1 = r_model_decay_1.evaluate(torch.stack(content_embs), max_diff, curr_min)
@@ -175,7 +208,7 @@ def main():
         if opt.save_preds == 1:
             new_file_path = './preds_' + opt.t
             mkdir_p(new_file_path)
-            new_file_name = new_file_path + '/preds_rating_seed' + str(opt.seed_nm) + '_' + str(GLOVE_DIM) + 'd_epoch60.csv'
+            new_file_name = new_file_path + '/preds_rating_seed' + str(opt.seed_nm) + '_' + str(GLOVE_DIM) + 'd_' + str(opt.sentence_num) + 'sn_epoch80.csv'
             f = open(new_file_name, 'w')
             head_line = "Item_ID\toriginal_mean\tpredicted\n"
             print(f'Start writing predictions to file:\n{new_file_name}\n...')
@@ -189,18 +222,18 @@ def main():
             f.close()
 
         # plot
-        plt.scatter(preds_decay_0, np.array(original_labels), s=5, c='y', label="initial")
-        plt.scatter(preds_decay_1, np.array(original_labels), s=5, c='r', label="1 epoch")
-        plt.scatter(preds_decay, np.array(original_labels), s=5, c='b', label="60 epochs")
-        plt.xlim(1, 7)
-        plt.ylim(1, 7)
-        plt.xlabel('predictions')
-        plt.ylabel('real ratings/strengths')
-        function = [i for i in range(1, 1001, 7)]
-        plt.plot(function, function, c='k', label="real rating = preds")
-        plt.legend()
-        plt.title("Target sentence only, implicature strength rating")
-        plt.show()
+        # plt.scatter(preds_decay_0, np.array(original_labels), s=5, c='y', label="initial")
+        # plt.scatter(preds_decay_1, np.array(original_labels), s=5, c='r', label="1 epoch")
+        # plt.scatter(preds_decay, np.array(original_labels), s=5, c='b', label="60 epochs")
+        # plt.xlim(1, 7)
+        # plt.ylim(1, 7)
+        # plt.xlabel('predictions')
+        # plt.ylabel('real ratings/strengths')
+        # function = [i for i in range(1, 1001, 7)]
+        # plt.plot(function, function, c='k', label="real rating = preds")
+        # plt.legend()
+        # plt.title("Target sentence only, implicature strength rating")
+        # plt.show()
     return
 
 if __name__ == "__main__":
