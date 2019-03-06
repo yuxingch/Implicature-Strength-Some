@@ -1,96 +1,186 @@
-# Copyright 2018 Stanford University
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-"""This file contains a function to read the GloVe vectors from file,
-and return them as an embedding matrix"""
-
-from __future__ import absolute_import
-from __future__ import division
-
-from tqdm import tqdm
+import torchtext.vocab as vocab
+import pandas as pd
+import re
 import numpy as np
-import string
+from tqdm import tqdm
+from itertools import combinations
+import matplotlib.pyplot as plt
 
-_PAD = b"<pad>"
-_UNK = b"<unk>"
-_START_VOCAB = [_PAD, _UNK]
-PAD_ID = 0
-UNK_ID = 1 
 
-def build_char_dict():
-    print "Building character dictionary."
-    char2id = {_PAD: 0, _UNK:1}
-    id2char = [_PAD, _UNK]
-    vocabulary = list(string.ascii_lowercase + string.digits + string.punctuation)
-    offset = 2
-    for v in vocabulary:
-        char2id[v] = offset
-        id2char.append(v)
-        offset += 1
-    return char2id, id2char
+def split_by_whitespace(sentence):
+    words = []
+    for space_separated_fragment in sentence.strip('.').strip().split():
+        words.extend(re.split(" ", space_separated_fragment))
+    return [w.lower() for w in words if w]
 
-def get_glove(glove_path, glove_dim):
-    """Reads from original GloVe .txt file and returns embedding matrix and
-    mappings from words to word ids.
 
-    Input:
-      glove_path: path to glove.6B.{glove_dim}d.txt
-      glove_dim: integer; needs to match the dimension in glove_path
+def get_words_per_paragraph(p):
+    modified_p = re.sub('#', '.', p).strip('.').split('.')
+    modified_p = list(filter(None, modified_p))
+    curr_words = []
+    for s in modified_p:
+        s = re.sub('[^a-zA-Z0-9 \n\.]', '', s)
+        curr_words += split_by_whitespace(s)
+    return curr_words
 
-    Returns:
-      emb_matrix: Numpy array shape (400002, glove_dim) containing glove embeddings
-        (plus PAD and UNK embeddings in first two rows).
-        The rows of emb_matrix correspond to the word ids given in word2id and id2word
-      word2id: dictionary mapping word (string) to word id (int)
-      id2word: dictionary mapping word id (int) to word (string)
-    """
 
-    print "Loading GLoVE vectors from file: %s" % glove_path
-    vocab_size = int(4e5) # this is the vocab size of the corpus we've downloaded
+def build_dictionary(input):
+    input_df = pd.read_csv(input, sep='\t')
+    dict_item_paragraph_raw = input_df[['Item_ID', '20-b']].groupby('Item_ID')['20-b'].apply(list).to_dict()
+    all_paragraphs = []
+    for (k, v) in dict_item_paragraph_raw.items():
+        all_paragraphs.append(dict_item_paragraph_raw[k][0])
+    # print(all_paragraphs[:10])
+    d = set()
+    for p in all_paragraphs:
+        curr_words = get_words_per_paragraph(p)
+        d = d.union(curr_words)
+    return d
 
-    emb_matrix = np.zeros((vocab_size + len(_START_VOCAB), glove_dim))
+
+def prune_glove(glossary, glove_dim=100):
+    glove_path = 'glove.6B.'+str(glove_dim)+'d.txt'
+    vocab_size = int(len(glossary))
+    emb_value = np.zeros((vocab_size, glove_dim))
     word2id = {}
     id2word = {}
-
-    random_init = True
-    # randomly initialize the special tokens
-    if random_init:
-        emb_matrix[:len(_START_VOCAB), :] = np.random.randn(len(_START_VOCAB), glove_dim)
-
-    # put start tokens in the dictionaries
     idx = 0
-    for word in _START_VOCAB:
-        word2id[word] = idx
-        id2word[idx] = word
-        idx += 1
+    with open(glove_path, 'r') as fh:
+        for line in tqdm(fh, total=vocab_size):
+            line = line.lstrip().rstrip().split(" ")
+            word = line[0]
+            if word in glossary:
+                vector = list(map(float, line[1:]))
+                # value = list(map(float, line[1:]))[at_dim]
+                emb_value[idx, :] = vector
+                word2id[word] = idx
+                id2word[idx] = word
+                idx += 1
+            else:
+                print(word)
+    # print(idx, len(word2id))
+    pruned = np.zeros((idx, glove_dim))
+    pruned[:idx, :] = emb_value[:idx, :]
+    # print(pruned[11], id2word[11], word2id['said'])
+    return pruned, word2id, id2word
 
-    # go through glove vecs
+
+def save_pruned_glove(pruned, id2word):
+    n, d = pruned.shape
+    save_path = './pruned_glove.6B.'+str(d)+'d.txt'
+    f = open(save_path, 'w')
+    for i in range(n):
+        curr_vector = pruned[i, :]
+        curr_word = id2word[i]
+        temp = ''
+        for j in range(d):
+            temp += ' ' + format(curr_vector[j])
+        f.write(curr_word)
+        f.write(temp+"\n")
+    f.close()
+
+
+def load_prune_glove(glove_path, glove_dim=100, vocab_size=7269):
+    # glove_path = 'pruned_glove.6B.100d.txt'
+    emb_value = np.zeros((vocab_size, glove_dim))
+    word2id = {}
+    id2word = {}
+    idx = 0
     with open(glove_path, 'r') as fh:
         for line in tqdm(fh, total=vocab_size):
             line = line.lstrip().rstrip().split(" ")
             word = line[0]
             vector = list(map(float, line[1:]))
-            if glove_dim != len(vector):
-                raise Exception("You set --glove_path=%s but --embedding_size=%i. If you set --glove_path yourself then make sure that --embedding_size matches!" % (glove_path, glove_dim))
-            emb_matrix[idx, :] = vector
+            # value = list(map(float, line[1:]))[at_dim]
+            emb_value[idx, :] = vector
             word2id[word] = idx
             id2word[idx] = word
             idx += 1
+    return emb_value, word2id, id2word
 
-    final_vocab_size = vocab_size + len(_START_VOCAB)
-    assert len(word2id) == final_vocab_size
-    assert len(id2word) == final_vocab_size
-    assert idx == final_vocab_size
 
-    return emb_matrix, word2id, id2word
+def cosine_similarity(v1, v2):
+    return np.dot(v1, v2) / (np.sqrt(np.dot(v1, v1)) * np.sqrt(np.dot(v2, v2)))
+
+
+def find_closest(word, id, emb):
+    combinations_ids = combinations(range(100), 3)
+    l = 161700
+    # l = 3921225
+    curr_max = -1
+    max_cb = None
+    for cb in tqdm(combinations_ids, total=l):
+        cb_list = list(cb)
+        prune_emb = np.zeros_like(emb)
+        prune_emb[cb_list] = emb[cb_list]
+        cos = cosine_similarity(prune_emb, emb)
+        if cos > curr_max:
+            curr_max = cos
+            max_cb = cb_list
+    return curr_max, max_cb
+
+
+def find_closest_for_sentence(emb):
+    # f='./embs_single_rand_unk.npy'
+    # sentence_embs = np.load(f)
+    combinations_ids = combinations(range(100), 3)
+    # l = 161700
+    curr_max = -1
+    max_cb = None
+    # for cb in tqdm(combinations_ids, total=l):
+    for cb in combinations_ids:
+        cb_list = list(cb)
+        prune_emb = np.zeros_like(emb)
+        prune_emb[cb_list] = emb[cb_list]
+        cos = cosine_similarity(prune_emb, emb)
+        # print(cos, curr_max)
+        if cos > curr_max:
+            curr_max = cos
+            max_cb = cb_list
+    return curr_max, max_cb
+
+
+def plot_frequency():
+    input_df = pd.read_csv('./most_important_dims_paragraph.csv', sep='\t')
+    lst = input_df.indices.tolist()
+    frequency = np.zeros(100)
+    for l in lst:
+        curr = l.split(',')
+        curr = list(map(int, curr))
+        frequency[curr] += 1
+    # n, bins, patches = plt.hist(frequency, 100, density=True, facecolor='g', alpha=0.75)
+
+    plt.plot(frequency, 'g.', markersize=6)
+    plt.xlabel('dimension')
+    plt.ylabel('frequency')
+    plt.title('Most important dimensions evaluated using cosine similarity')
+    plt.grid(True)
+    plt.show()
+
+
+def main():
+    # result = build_dictionary('./swbdext.csv')
+    # pruned, word2id, id2word = prune_glove(result)
+    # save_pruned_glove(pruned, id2word)
+
+    # word_embs, word2id, id2word = load_prune_glove('pruned_glove.6B.100d.txt')
+    # # print(word_embs[11], id2word[11], word2id['said'])
+    # save_path = './most_important_dims_paragraph.csv'
+    # f = open(save_path, 'w')
+    # headline = 'n\tsimilarity\tindices\n'
+    # f.write(headline)
+    # sentence_embs = np.load('./embs_paragraph_rand_unk_2.npy')
+    # # for idx in range(1362):
+    # for idx in tqdm(range(1951), total=1951):
+    #     curr_max, max_cb = find_closest_for_sentence(sentence_embs[idx])
+    #     s = format(idx)
+    #     s += '\t'+format(curr_max)+'\t'
+    #     s += ','.join(str(e) for e in max_cb)
+    #     s += '\n'
+    #     f.write(s)
+    # f.close()
+    plot_frequency()
+
+
+if __name__ == "__main__":
+    main()
