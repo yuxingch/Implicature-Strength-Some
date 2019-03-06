@@ -23,7 +23,7 @@ GLOVE_DIM = 100
 glove = vocab.GloVe(name='6B', dim=GLOVE_DIM)
 # print('Loaded {} words'.format(len(glove.itos)))
 
-torch.manual_seed(7)
+torch.manual_seed(1)
 
 _UNK = torch.randn(GLOVE_DIM,)
 _PAD = torch.randn(GLOVE_DIM,)
@@ -31,7 +31,7 @@ _PAD = torch.randn(GLOVE_DIM,)
 
 def build_state_dict(config_net):
     """Build dictionary to store the state of our net"""
-    return torch.load(config_net, map_location=lambda storage, loc: storage)
+    return torch.load(config_net, map_location=lambda storage, loc: storage)['state_dict']
 
 
 def write_summary(value, tag, summary_writer, global_step):
@@ -52,15 +52,17 @@ class RatingModel(object):
             self.summary_writer = tf.summary.FileWriter(self.log_dir)
 
         self.batch_size = 32
-        self.total_epoch = 160
+        self.total_epoch = 200
         self.load_checkpoint = load_checkpoint
+        # self.lr = 0.02
         self.lr = 0.02
-        self.lr_decay_per_epoch = 10
+        self.lr_decay_per_epoch = 20
 
     def load_network(self):
-        from net import RateNet
+        from net import RateNet, RateNet2D
         print('initializing neural net')
-        RNet = RateNet(GLOVE_DIM)
+        # RNet = RateNet(GLOVE_DIM)
+        RNet = RateNet2D(GLOVE_DIM)
         RNet.apply(weights_init)
 
         if self.load_checkpoint != "":
@@ -69,15 +71,16 @@ class RatingModel(object):
 
         return RNet
 
-    def train(self, word_embs, labels):
+    def train(self, word_embs, labels, prev_epoch=0):
         labels = np.expand_dims(labels, axis=1) 
         RNet = self.load_network()
         lr = self.lr
         optimizer = optim.Adam(RNet.parameters(), lr=lr, betas=(0.9, 0.999))
         # print(word_embs.size())
         count = 0
-        epoch = 0
-        save_model(RNet, epoch, self.model_dir)
+        epoch = prev_epoch
+        if epoch == 0:
+            save_model(RNet, epoch, self.model_dir)
         while (epoch < self.total_epoch):
             epoch += 1
             start_t = time.time()
@@ -129,26 +132,33 @@ class RatingModel(object):
 
         rating_lst = []
         count = 0
+        all_hiddens_list = []
         while count < num_items:
             iend = count + batch_size
             if iend > num_items:
                 iend = num_items
+                # break
                 # count = num_items - batch_size
             curr_batch = Variable(word_embs[count:iend])
+            # output_scores, h = RNet(curr_batch)
             output_scores = RNet(curr_batch)
+            # all_hiddens_list.append(h)
+            # print(output_scores.size())
             for curr_score in output_scores.data.tolist():
                 rating_lst.append(curr_score[0]*max_diff+min_value)
             count += batch_size
-        return np.array(rating_lst)
+        # all_hiddens = torch.cat(tuple(all_hiddens_list)).data.numpy()
+        return np.array(rating_lst)  #, all_hiddens
 
     def analyze(self):
         RNet = self.load_network()
         RNet.eval()
 
-        w = RNet.fc1[0].weight.data.numpy()
-        w_max, w_min = np.amax(w), np.amin(w)
-        w_normalized = (w - w_min) / (w_max - w_min) * 255.0
-        return w_normalized
+        w = RNet.conv1.weight.data.numpy()
+        # w_max, w_min = np.amax(w), np.amin(w)
+        # w_normalized = (w - w_min) / (w_max - w_min) * 255.0
+        # return w_normalized
+        return w
 
 
 def get_word(w):
@@ -167,18 +177,95 @@ def split_by_whitespace(sentence):
 
 
 def get_sentence(s, max_len=40):
-    s = re.sub('[^a-zA-Z0-9 \n\.]', '', s)
-    raw_tokens = split_by_whitespace(s)
-    # print(raw_tokens)
+    # s = re.sub('[^a-zA-Z0-9 \n\.]', '', s)
+    # raw_tokens = split_by_whitespace(s)
+    # # print(raw_tokens)
+    # n = len(raw_tokens)
+    # if (n < max_len):
+    #     lst = [get_word(w.lower()) for w in raw_tokens]
+    #     # lst += [_PAD] * (max_len - n)
+    # else:
+    #     raw_tokens = raw_tokens[:max_len]
+    #     lst = [get_word(w.lower()) for w in raw_tokens]
+    s = s.replace('\'ve', ' \'ve')
+    s = s.replace('\'re', ' \'re')
+    s = s.replace('\'ll', ' \'ll')
+    s = s.replace('n\'t', ' n\'t')
+    s = s.replace('\'d', ' \'d')
+    s = s.replace('-', ' ')
+    s = s.replace('\'s', ' \'s')
+    modified_s = re.sub('#', '.', s).strip('.').split('.')
+    modified_s = list(filter(None, modified_s))
+    raw_tokens = []
+    for s in modified_s:
+        s = re.sub('speaker[0-9a-z\-\*]*[0-9]', '', s)
+        s = re.sub('[^a-zA-Z0-9- \n\.]', '', s)
+        s = re.sub('n[0-9][0-9a-z]{4,5}', '', s)
+        s = re.sub('[0-9]t[0-9]+', '', s)
+        s = s.replace(' oclock ', ' o\'clock ')
+        s = s.replace(' ve ', ' \'ve ')
+        s = s.replace(' re ', ' \'re ')
+        s = s.replace(' ll ', ' \'ll ')
+        s = s.replace(' nt ', ' n\'t ')
+        s = s.replace(' d ', ' \'d ')
+        s = s.replace(' s ', ' \'s ')
+        s = s.replace('doeuvres', 'd\'oeuvres')
+        s = s.replace('mumblex', 'mumble')
+        raw_tokens += split_by_whitespace(s)
+    # lst = [get_word(w.lower()) for w in raw_tokens]
+    lst = []
+    for w in raw_tokens:
+        curr_emb = get_word(w.lower())
+        if torch.all(torch.eq(curr_emb, _UNK)):
+            print(w)
+            continue
+        else:
+            lst.append(curr_emb)
+    all_embs = torch.stack(lst)
+    return torch.mean(all_embs, 0), raw_tokens  # embedding_size
+
+
+def get_sentence_2d(s, max_len=32):
+    # s = re.sub('[^a-zA-Z0-9 \n\.]', '', s)
+    # raw_tokens = split_by_whitespace(s)
+    # n = len(raw_tokens)
+    # if (n < max_len):
+    #     lst = [get_word(w.lower()) for w in raw_tokens]
+    #     lst += [_PAD] * (max_len - n)
+    # else:
+    #     raw_tokens = raw_tokens[:max_len]
+    #     lst = [get_word(w.lower()) for w in raw_tokens]
+    s = s.replace('\'ve', ' \'ve')
+    s = s.replace('\'ll', ' \'ll')
+    s = s.replace('n\'t', ' n\'t')
+    s = s.replace('\'d', ' \'d')
+    s = s.replace('-', ' ')
+    s = s.replace('\'s', ' \'s')
+    modified_s = re.sub('#', '.', s).strip('.').split('.')
+    modified_s = list(filter(None, modified_s))
+    raw_tokens = []
+    for s in modified_s:
+        s = re.sub('speaker[0-9a-z\-\*]*[0-9]', '', s)
+        s = re.sub('[^a-zA-Z0-9- \n\.]', '', s)
+        s = re.sub('n[0-9][0-9a-z]{4,5}', '', s)
+        s = re.sub('[0-9]t[0-9]+', '', s)
+        s = s.replace(' ve ', ' \'ve ')
+        s = s.replace(' ll ', ' \'ll ')
+        s = s.replace(' nt ', ' n\'t ')
+        s = s.replace(' d ', ' \'d ')
+        s = s.replace(' s ', ' \'s ')
+        s = s.replace('doeuvres', 'd\'oeuvres')
+        s = s.replace('mumblex', 'mumble')
+        raw_tokens += split_by_whitespace(s)
     n = len(raw_tokens)
     if (n < max_len):
         lst = [get_word(w.lower()) for w in raw_tokens]
-        # lst += [_PAD] * (max_len - n)
+        lst += [_PAD] * (max_len - n)
     else:
         raw_tokens = raw_tokens[:max_len]
         lst = [get_word(w.lower()) for w in raw_tokens]
-    all_embs = torch.stack(lst)
-    return torch.mean(all_embs, 0), raw_tokens  # embedding_size
+    all_embs = torch.stack(lst).permute(1, 0)
+    return all_embs, raw_tokens
 
 
 def parse_paragraph_2(p, target_tokens):

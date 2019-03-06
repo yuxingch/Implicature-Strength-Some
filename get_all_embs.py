@@ -14,32 +14,64 @@ GLOVE_DIM = 100
 glove = vocab.GloVe(name='6B', dim=GLOVE_DIM)
 # print('Loaded {} words'.format(len(glove.itos)))
 
-torch.manual_seed(7)
+torch.manual_seed(0)
 
 _UNK = torch.randn(GLOVE_DIM,)
 _PAD = torch.randn(GLOVE_DIM,)
 NOT_EXIST = torch.FloatTensor(1, GLOVE_DIM).zero_()
 
 
+_OOV = dict()
+
+
 def get_word(w):
     try:
         result = glove.vectors[glove.stoi[w]]
     except KeyError:
-        result = _UNK
+        # result = _UNK
+        if w in _OOV:
+            result = _OOV[w]
+        else:
+            result = torch.randn(GLOVE_DIM,)
+            _OOV[w] = result
+        print(w)
     return result
 
 
 def get_sentence(s, max_len=40):
-    s = re.sub('[^a-zA-Z0-9 \n\.]', '', s)
-    raw_tokens = split_by_whitespace(s)
+    s = s.replace('\'ve', ' \'ve')
+    s = s.replace('\'ll', ' \'ll')
+    s = s.replace('n\'t', ' n\'t')
+    s = s.replace('\'d', ' \'d')
+    s = s.replace('-', ' ')
+    s = s.replace('\'s', ' \'s')
+    modified_s = re.sub('#', '.', s).strip('.').split('.')
+    modified_s = list(filter(None, modified_s))
+    raw_tokens = []
+    for s in modified_s:
+        s = re.sub('speaker[0-9a-z\-\*]*[0-9]', '', s)
+        s = re.sub('[^a-zA-Z0-9- \n\.]', '', s)
+        s = re.sub('n[0-9][0-9a-z]{4,5}', '', s)
+        s = re.sub('[0-9]t[0-9]+', '', s)
+        s = s.replace(' ve ', ' \'ve ')
+        s = s.replace(' ll ', ' \'ll ')
+        s = s.replace(' nt ', ' n\'t ')
+        s = s.replace(' d ', ' \'d ')
+        s = s.replace(' s ', ' \'s ')
+        s = s.replace('doeuvres', 'd\'oeuvres')
+        s = s.replace('mumblex', 'mumble')
+        raw_tokens += split_by_whitespace(s)
+    # s = re.sub('[^a-zA-Z0-9 \n\.]', '', s)
+    # raw_tokens = split_by_whitespace(s)
     # print(raw_tokens)
-    n = len(raw_tokens)
-    if (n < max_len):
-        lst = [get_word(w.lower()) for w in raw_tokens]
-        # lst += [_PAD] * (max_len - n)
-    else:
-        raw_tokens = raw_tokens[:max_len]
-        lst = [get_word(w.lower()) for w in raw_tokens]
+    # n = len(raw_tokens)
+    # if (n < max_len):
+    #     lst = [get_word(w.lower()) for w in raw_tokens]
+    #     # lst += [_PAD] * (max_len - n)
+    # else:
+    #     raw_tokens = raw_tokens[:max_len]
+    #     lst = [get_word(w.lower()) for w in raw_tokens]
+    lst = [get_word(w.lower()) for w in raw_tokens]
     all_embs = torch.stack(lst)
     return torch.mean(all_embs, 0), raw_tokens  # embedding_size
 
@@ -144,6 +176,22 @@ def single_sentence(contents, contexts):
     f.close()
 
 
+def single_sentence_npy(contents, contexts):
+    sentence_embs = []
+    i = 0
+    for (k, v) in contexts.items():
+        # i += 1
+        # if (i > 10):
+        #     break
+        # print(k, v[0])
+        curr_emb, _ = get_sentence(v[0])
+        curr_emb_list = curr_emb.tolist()
+        sentence_embs.append(curr_emb_list)
+    sentence_embs_np = np.array(sentence_embs)
+    print(sentence_embs_np.shape)
+    np.save('./embs_paragraph_rand_unk_2.npy', sentence_embs_np)
+
+
 def two_precedings(contents, contexts):
     f = open('./embs_two.csv', 'w')
     head_line = "Item_ID\tVector_Representation\n"
@@ -201,7 +249,7 @@ def main():
     print(opt)
     _, contents, contexts = load_dataset(opt.some_db_dir, opt.swbd_dir)
     if opt.num_preceding == 0:
-        single_sentence(contents, contexts)
+        single_sentence_npy(contents, contexts)
     elif opt.num_preceding == 2:
         two_precedings(contents, contexts)
     elif opt.num_preceding == 3:

@@ -39,9 +39,14 @@ def weights_init(m):
 
 
 def save_model(RNet, epoch, model_dir):
+    # torch.save(
+    #     RNet.state_dict(),
+    #     '%s/RNet_epoch_%d.pth' % (model_dir, epoch))
     torch.save(
-        RNet.state_dict(),
-        '%s/RNet_epoch_%d.pth' % (model_dir, epoch))
+        {'epoch': epoch,
+         'state_dict': RNet.state_dict()},
+        '%s/RNet_epoch_%d.pth' % (model_dir, epoch)
+    )
     print('Save model')
 
 
@@ -153,9 +158,22 @@ def order_by_dims(at_dim_max, at_dim_min, glove_dim=100):
     plt.show()
 
 
+def compare_weights(f1='./original.npy', f2='./plus.npy'):
+    original = np.load(f1)
+    plus = np.load(f2)
+    w = plus - original
+    w_max, w_min = np.amax(w), np.amin(w)
+    w_normalized = (w - w_min) / (w_max - w_min) * 255.0
+    plt.imshow(w_normalized, cmap='RdPu')
+    plt.colorbar()
+    plt.show()
+
+
 def main():
     # order_by_dims([13, 51, 86, 96])
-    order_by_dims([13, 51, 86, 96], [5, 9, 30, 65])
+    # order_by_dims([13, 51, 86, 96], [5, 9, 30, 65])
+    compare_weights()
+
 
 if __name__ == "__main__":
     main()
