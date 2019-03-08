@@ -1,0 +1,7 @@
+SOME_DATABASE: './some_database.csv'
+CONFIG_NAME: 'test'
+EXPERIMENT_NAME: 'test_yml'
+
+TRAIN:
+    LR: 0.01
+    TOTAL_EPOCH: 40

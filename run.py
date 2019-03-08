@@ -5,15 +5,82 @@ import matplotlib.pyplot as plt
 import torch
 from collections import defaultdict
 from models import split_by_whitespace, RatingModel, get_sentence, get_sentence_2d
+from models import get_sentence_elmo
 from models import parse_paragraph_2, parse_paragraph_3
 import torch
+from tqdm import tqdm
 import random
 import argparse
 from utils import mkdir_p
+from datetime import datetime
+from allennlp.commands.elmo import ElmoEmbedder
+import os
+import yaml
+import pprint
+
+from easydict import EasyDict as edict
+
+
+cfg = edict()
 # from vocab import get_glove, build_char_dict
+
+cfg.SOME_DATABASE = './some_database.csv'
+cfg.CONFIG_NAME = ''
+cfg.RESUME_DIR = ''
+cfg.SEED = 0
+cfg.MODE = 'train'
+cfg.PREDICTION_TYPE = 'rating'
+cfg.IS_RANDOM = False
+cfg.SINGLE_SENTENCE = True
+cfg.EXPERIMENT_NAME = ''
+cfg.GLOVE_DIM = 100
+cfg.IS_ELMO = True
+cfg.ELMO_MODE = 'concat'
+cfg.SAVE_PREDS = False
+cfg.BATCH_ITEM_NUM = 29
+
+# Training options
+cfg.TRAIN = edict()
+cfg.TRAIN.FLAG = True
+cfg.TRAIN.BATCH_SIZE = 32
+cfg.TRAIN.TOTAL_EPOCH = 200
+cfg.TRAIN.INTERVAL = 20
+cfg.TRAIN.START_EPOCH = 0
+cfg.TRAIN.LR_DECAY_EPOCH = 20
+cfg.TRAIN.LR = 5e-2
+cfg.TRAIN.COEFF = edict()
+cfg.TRAIN.COEFF.BETA_1 = 0.9
+cfg.TRAIN.COEFF.BETA_2 = 0.999
+cfg.TRAIN.LR_DECAY_RATE = 0.8
 
 GLOVE_DIM = 100
 NOT_EXIST = torch.FloatTensor(1, GLOVE_DIM).zero_()
+
+
+def merge_yaml(new_cfg, old_cfg):
+    for k, v in new_cfg.items():
+        # check type
+        old_type = type(old_cfg[k])
+        if old_type is not type(v):
+            if isinstance(old_cfg[k], np.ndarray):
+                v = np.array(v, dtype=old_cfg[k].dtype)
+            else:
+                raise ValueError(('Type mismatch for config key: {}').format(k))
+        # recursively merge dicts
+        if type(v) is edict:
+            try:
+                merge_yaml(new_cfg[k], old_cfg[k])
+            except:
+                print('Error under config key: {}'.format(k))
+                raise
+        else:
+            old_cfg[k] = v
+
+
+def cfg_setup(filename):
+    with open(filename, 'r') as f:
+        new_cfg = edict(yaml.load(f))
+    merge_yaml(new_cfg, cfg)
 
 
 def load_dataset_plus(input0, input1, input2, t):
@@ -77,6 +144,7 @@ def random_input(num_examples):
 
 
 def main():
+    embedder = ElmoEmbedder()
     parser = argparse.ArgumentParser(
         description='Run ...')
     parser.add_argument('--seed', dest='seed_nm', default=0, type=int)
@@ -85,18 +153,40 @@ def main():
     parser.add_argument('--random', dest='random_vector', default=False)
     parser.add_argument('--sn', dest='sentence_num', default=0, type=int)
     parser.add_argument('--save_preds', dest='save_preds', default=1)
+    parser.add_argument('--name', dest='experiment_name', default="")
+    parser.add_argument('--conf', dest='config_file', default="unspecified")
     opt = parser.parse_args()
     print(opt)
-    some_database = "./some_database.csv"
-    # curr_path = "./datasets/seed_" + str(opt.seed_nm) + "_plus"
-    curr_path = "./datasets/seed_" + str(opt.seed_nm)
+
+    if opt.config_file is not "unspecified":
+        cfg_setup(opt.config_file)
+        if not cfg.MODE == 'train':
+            cfg.TRAIN.FLAG = False
+    else:
+        cfg.SEED = opt.seed_nm
+        cfg.PREDICTION_TYPE = opt.t
+        cfg.IS_RANDOM = opt.random_vector
+        if opt.sentence_num != 0:
+            cfg.SINGLE_SENTENCE = False
+        cfg.SAVE_PREDS = opt.save_preds
+        cfg.EXPERIMENT_NAME = opt.experiment_name
+        if not opt.mode == 'train':
+            cfg.TRAIN.FLAG = False
+            cfg.MODE = opt.mode
+
+    print('Using configurations:')
+    pprint.pprint(cfg)
+
+    some_database = cfg.SOME_DATABASE
+    curr_path = "./datasets/seed_" + str(cfg.SEED)
     is_train = True
+    if cfg.EXPERIMENT_NAME == "":
+        cfg.EXPERIMENT_NAME = datetime.now().strftime('%m_%d_%H_%M')
     if opt.mode == 'analyze':
         # pass
-        eval_path = "./2d_emb" + str(GLOVE_DIM) + "_" + opt.t + "_" + str(opt.seed_nm)
-        # eval_path = "./emb" + str(GLOVE_DIM) + "_" + opt.t + "_" + str(opt.seed_nm)
+        eval_path = "./" + cfg.EXPERIMENT_NAME + "_" + cfg.PREDICTION_TYPE + "_" + str(cfg.SEED)
         r_model_analyze = None
-        if opt.random_vector:
+        if cfg.IS_RANDOM:
             eval_path += "_random"
             load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
         else:
@@ -104,7 +194,7 @@ def main():
         epoch_to_analyze = [0, 1, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200]
         epoch_npy = []
         for epoch in epoch_to_analyze:
-            r_model_analyze = RatingModel(eval_path, load_checkpoint=load_path + "/RNet_epoch_" + str(epoch) + ".pth", is_train=False)
+            r_model_analyze = RatingModel(eval_path, load_checkpoint=load_path + "/RNet_epoch_" + str(epoch) + ".pth", is_train=cfg.TRAIN.FLAG)
             epoch_npy.append(r_model_analyze.analyze())
         # -- save numpy file
         # np.save('plus', epoch_npy[3][:, :100])
@@ -156,19 +246,18 @@ def main():
         # w = epoch_npy[3] - epoch_npy[0]
         # w_max, w_min = np.amax(w), np.amin(w)
         # w_normalized = (w - w_min) / (w_max - w_min) * 255.0
-
         plt.show()
         return
-    elif opt.mode == 'train':
+    elif cfg.MODE == 'train':
         load_db = curr_path + "/train_db.csv"
-    elif opt.mode == 'eval':
+    elif cfg.MODE == 'eval':
         load_db = curr_path + "/eval_db.csv"
         is_train = False
-    elif opt.mode == 'all':
+    elif cfg.MODE == 'all':
         is_train = False
         load_db = curr_path + "/all_db.csv"
     # labels, contents, contexts, part, mod, sub = load_dataset("./some_database.csv", load_db, "./swbdext.csv", opt.t)
-    labels, contents, contexts = load_dataset("./some_database.csv", load_db, "./swbdext.csv", opt.t)
+    labels, contents, contexts = load_dataset(cfg.SOME_DATABASE, load_db, "./swbdext.csv", cfg.PREDICTION_TYPE)
 
     curr_max = 0
     curr_min = 100
@@ -187,24 +276,41 @@ def main():
         original_labels.append(float(v))
         labels[k] = (float(v) - curr_min) / max_diff
         normalized_labels.append(labels[k])
+    cfg.BATCH_ITEM_NUM = len(normalized_labels)//cfg.TRAIN.BATCH_SIZE
 
     content_embs = []
     plain_embs = []
     content_embs = []
+    content_embs_np = None
+    content_embs_stack = None
 
     if opt.sentence_num == 0:
-        for (k, v) in contents.items():  # <-- only the target
-            # curr_emb, _ = get_sentence_2d(v[0])
-            context_v = contexts[k]
-            curr_emb, _ = get_sentence(context_v[0])
-            # curr_emb, _ = get_sentence(v[0])
-            # curr_plus = torch.tensor([float(part[k][0]), float(mod[k][0]), float(sub[k][0])])
-            # print(k, torch.cat((curr_emb, curr_plus)))
-            # return
-            content_embs.append(curr_emb)
-            # content_embs.append(torch.cat((curr_emb, curr_plus)))
-        print(torch.stack(content_embs).size())  #954, 40, 100
-        # return
+        NUMPY_PATH = './datasets/seed_' + str(cfg.SEED)
+        if cfg.IS_ELMO:
+            NUMPY_PATH += '/elmo_' + cfg.ELMO_MODE + '/embs_' + cfg.MODE + '.npy'
+        else:
+            NUMPY_PATH += '/embs_' + cfg.MODE + '.npy'
+        if os.path.isfile(NUMPY_PATH):
+            content_embs_np = np.load(NUMPY_PATH)
+            content_embs_stack = torch.from_numpy(content_embs_np)
+        else:
+            for (k, v) in tqdm(contents.items(), total=len(contents)):  # <-- only the target
+                # curr_emb, _ = get_sentence_2d(v[0])
+                context_v = contexts[k]
+                if cfg.IS_ELMO:
+                    # elmo
+                    curr_emb, _ = get_sentence_elmo(v[0], embedder=embedder)
+                else:
+                    # curr_emb, _ = get_sentence(context_v[0])
+                    curr_emb, _ = get_sentence(v[0])
+
+                # curr_plus = torch.tensor([float(part[k][0]), float(mod[k][0]), float(sub[k][0])])
+                # print(k, torch.cat((curr_emb, curr_plus)))
+                # return
+                content_embs.append(curr_emb)
+                # content_embs.append(torch.cat((curr_emb, curr_plus)))
+            content_embs_stack = torch.stack(content_embs)
+            np.save(NUMPY_PATH, content_embs_stack.numpy())
     elif opt.sentence_num == 2:
         for (k, v) in contents.items():  # <-- Two Sentences
             curr_emb, target_tokens = get_sentence(v[0])
@@ -244,43 +350,40 @@ def main():
         else:
             fake_embs = random_input(408)
 
-    if is_train:
-        # save_path = "./plus_emb" + str(GLOVE_DIM) + "_" + opt.t + "_" + str(opt.seed_nm)
-        save_path = "./UNK_all_emb" + str(GLOVE_DIM) + "_" + opt.t + "_" + str(opt.seed_nm)
-        if opt.random_vector:
+    if cfg.TRAIN.FLAG:
+        save_path = "./" + cfg.EXPERIMENT_NAME + "_" + cfg.PREDICTION_TYPE + "_" + str(cfg.SEED)
+        if cfg.IS_RANDOM:
             save_path += "_random"
             print(save_path)
-            r_model = RatingModel(save_path, load_checkpoint=save_path+"/RNet_epoch_160.pth", sn=opt.sentence_num)
-            r_model.train(fake_embs, np.array(normalized_labels), prev_epoch=160)
+            r_model = RatingModel(cfg, save_path, sn=opt.sentence_num)
+            r_model.train(fake_embs, np.array(normalized_labels))
         else:
             print(save_path)
-            # r_model = RatingModel(save_path, load_checkpoint=save_path+"/Model_" + str(opt.sentence_num) + "S" + "/RNet_epoch_200.pth", sn=opt.sentence_num)
-            r_model = RatingModel(save_path, sn=opt.sentence_num)
-            r_model.train(torch.stack(content_embs), np.array(normalized_labels), prev_epoch=0)
+            r_model = RatingModel(cfg, save_path, sn=opt.sentence_num)
+            # r_model.train(torch.stack(content_embs), np.array(normalized_labels), prev_epoch=0)
+            r_model.train(content_embs_stack, np.array(normalized_labels))
     else:
-        eval_path = "./UNK_all_emb" + str(GLOVE_DIM) + "_" + opt.t + "_" + str(opt.seed_nm)
-        if opt.random_vector:
+        eval_path = "./" + cfg.EXPERIMENT_NAME + "_" + cfg.PREDICTION_TYPE + "_" + str(cfg.SEED)
+        epoch_lst = [0, 1]
+        i = 0
+        while i < cfg.TRAIN.TOTAL_EPOCH - cfg.TRAIN.INTERVAL + 1:
+            i += cfg.TRAIN.INTERVAL
+            epoch_lst.append(i)
+        if cfg.IS_RANDOM:
             eval_path += "_random"
             load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
-            r_model_decay = RatingModel(eval_path, load_checkpoint=load_path + "/RNet_epoch_60.pth", is_train=False)
-            preds_decay = r_model_decay.evaluate(fake_embs, max_diff, curr_min)
-            r_model_decay_1 = RatingModel(eval_path, load_checkpoint=load_path + "/RNet_epoch_1.pth", is_train=False)
-            preds_decay_1 = r_model_decay_1.evaluate(fake_embs, max_diff, curr_min)
-            r_model_decay_0 = RatingModel(eval_path, load_checkpoint=load_path + "/RNet_epoch_0.pth", is_train=False)
-            preds_decay_0 = r_model_decay_0.evaluate(fake_embs, max_diff, curr_min)
+            for epoch in epoch_lst:
+                cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+".pth"
+                r_model_decay = RatingModel(cfg, eval_path)
+                preds_decay = r_model_decay.evaluate(fake_embs, max_diff, curr_min)
         else:
             load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
-            # r_model_decay = RatingModel(eval_path, load_checkpoint=load_path + "/RNet_epoch_60.pth", is_train=False)
-            # preds_decay = r_model_decay.evaluate(torch.stack(content_embs), max_diff, curr_min)
-            # r_model_decay_1 = RatingModel(eval_path, load_checkpoint=load_path + "/RNet_epoch_1.pth", is_train=False)
-            # preds_decay_1 = r_model_decay_1.evaluate(torch.stack(content_embs), max_diff, curr_min)
-            # r_model_decay_0 = RatingModel(eval_path, load_checkpoint=load_path + "/RNet_epoch_0.pth", is_train=False)
-            # preds_decay_0 = r_model_decay_0.evaluate(torch.stack(content_embs), max_diff, curr_min)
-            for epoch in [0,1,20,40,60,80,100,120,140,160,180,200]:
-                r_model_decay = RatingModel(eval_path, load_checkpoint=load_path + "/RNet_epoch_" + format(epoch)+".pth", is_train=False)
-                preds_decay = r_model_decay.evaluate(torch.stack(content_embs), max_diff, curr_min)
-                print(np.corrcoef(preds_decay, np.array(original_labels))[0,1])
-            
+            for epoch in epoch_lst:
+                cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+".pth"
+                r_model_decay = RatingModel(cfg, eval_path)
+                # preds_decay = r_model_decay.evaluate(torch.stack(content_embs), max_diff, curr_min)
+                preds_decay = r_model_decay.evaluate(content_embs_stack, max_diff, curr_min)
+                print(np.corrcoef(preds_decay, np.array(original_labels))[0, 1])
 
         # save hidden vector
         # f = open('./0216_rating/train_first_hidden_layer_epoch80.csv', 'w')
