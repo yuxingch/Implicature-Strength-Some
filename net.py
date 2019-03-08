@@ -5,7 +5,7 @@ def fc_layer(in_features, out_features):
     return nn.Sequential(nn.Linear(in_features, out_features, bias=True),
                          nn.BatchNorm1d(out_features),
                          nn.ReLU(True),
-                         nn.Dropout(p=0.5))
+                         nn.Dropout(p=0.75))
 
 
 class RateNet(nn.Module):
@@ -29,6 +29,29 @@ class RateNet(nn.Module):
         h1 = self.fc1(word_embs)
         h = self.fc2(h1)
         # return self.get_score(h), h1
+        return self.get_score(h)
+
+
+class RateNetELMo(nn.Module):
+    def __init__(self, glove_dim, plus_dim=0):
+        super(RateNetELMo, self).__init__()
+        self.glove_dim = glove_dim
+        self.plus_dim = plus_dim
+        self.input_dim = self.glove_dim + self.plus_dim
+        self.fc1, self.fc2 = None, None
+        self.get_score = None
+        self.define_module()
+
+    def define_module(self):
+        self.fc1 = fc_layer(self.input_dim, self.input_dim//2)
+        self.fc2 = fc_layer(self.input_dim//2, self.input_dim//4)
+
+        self.get_score = nn.Sequential(
+            nn.Linear(self.input_dim//4, 1, bias=True))
+
+    def forward(self, word_embs):
+        h1 = self.fc1(word_embs)
+        h = self.fc2(h1)
         return self.get_score(h)
 
 

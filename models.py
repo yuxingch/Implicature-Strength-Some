@@ -14,9 +14,18 @@ import matplotlib.pyplot as plt
 
 import tensorflow as tf
 import visdom
+from easydict import EasyDict as edict
+
+# ELMo
+from allennlp.commands.elmo import ElmoEmbedder
+# from allennlp.modules.elmo import Elmo, batch_to_ids
 
 from utils import mkdir_p, weights_init, save_model
 ssl._create_default_https_context = ssl._create_unverified_context
+
+
+OPTION_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
+WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
 
 GLOVE_DIM = 100
 
@@ -43,26 +52,32 @@ def write_summary(value, tag, summary_writer, global_step):
 
 class RatingModel(object):
 
-    def __init__(self, output_dir, sn=0, load_checkpoint="", is_train=True):
-        if is_train:
+    def __init__(self, cfg, output_dir, sn=0):
+        self.cfg = cfg
+        if self.cfg.TRAIN.FLAG:
             self.model_dir = os.path.join(output_dir, 'Model_' + str(sn) + 'S')
             self.log_dir = os.path.join(output_dir, 'Log_' + str(sn) + 'S')
             mkdir_p(self.model_dir)
             mkdir_p(self.log_dir)
             self.summary_writer = tf.summary.FileWriter(self.log_dir)
 
-        self.batch_size = 32
-        self.total_epoch = 200
-        self.load_checkpoint = load_checkpoint
-        # self.lr = 0.02
-        self.lr = 0.02
-        self.lr_decay_per_epoch = 20
+        self.batch_size = self.cfg.TRAIN.BATCH_SIZE
+        self.total_epoch = self.cfg.TRAIN.TOTAL_EPOCH
+        self.load_checkpoint = self.cfg.RESUME_DIR
+        self.lr = self.cfg.TRAIN.LR
+        self.lr_decay_per_epoch = self.cfg.TRAIN.LR_DECAY_EPOCH
 
     def load_network(self):
-        from net import RateNet, RateNet2D
+        from net import RateNet, RateNet2D, RateNetELMo
         print('initializing neural net')
-        # RNet = RateNet(GLOVE_DIM)
-        RNet = RateNet2D(GLOVE_DIM)
+        RNet = None
+        if self.cfg.IS_ELMO:
+            if self.cfg.ELMO_MODE == 'concat':
+                RNet = RateNetELMo(3072)
+            else:
+                RNet = RateNetELMo(1024)
+        else:
+            RNet = RateNet(self.cfg.GLOVE_DIM)
         RNet.apply(weights_init)
 
         if self.load_checkpoint != "":
@@ -71,14 +86,14 @@ class RatingModel(object):
 
         return RNet
 
-    def train(self, word_embs, labels, prev_epoch=0):
-        labels = np.expand_dims(labels, axis=1) 
+    def train(self, word_embs, labels):
+        labels = np.expand_dims(labels, axis=1)
         RNet = self.load_network()
         lr = self.lr
-        optimizer = optim.Adam(RNet.parameters(), lr=lr, betas=(0.9, 0.999))
-        # print(word_embs.size())
-        count = 0
-        epoch = prev_epoch
+        optimizer = optim.Adam(RNet.parameters(), lr=lr, betas=(self.cfg.TRAIN.COEFF.BETA_1, self.cfg.TRAIN.COEFF.BETA_2))
+        epoch = self.cfg.TRAIN.START_EPOCH
+        count = self.cfg.TRAIN.START_EPOCH*self.cfg.BATCH_ITEM_NUM
+
         if epoch == 0:
             save_model(RNet, epoch, self.model_dir)
         while (epoch < self.total_epoch):
@@ -90,7 +105,7 @@ class RatingModel(object):
 
             if epoch % self.lr_decay_per_epoch == 0:
                 # update learning rate
-                lr *= 0.8
+                lr *= self.cfg.TRAIN.LR_DECAY_RATE
                 print(f'learning rate updated: {lr}')
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = lr
@@ -117,7 +132,7 @@ class RatingModel(object):
 
             end_t = time.time()
             print(f'[{epoch}/{self.total_epoch}][{i}/{len(batch_inds)-1}] Loss: {loss:.4f}'
-                    f' Total Time: {(end_t-start_t):.2f}sec')
+                  f' Total Time: {(end_t-start_t):.2f}sec')
             if epoch % 20 == 0 or epoch == 1:
                 save_model(RNet, epoch, self.model_dir)
         save_model(RNet, self.total_epoch, self.model_dir)
@@ -365,6 +380,42 @@ def parse_paragraph_3(p, target_tokens):  # <--- 3
 #     else:
 #         next_mean = torch.IntTensor(1, GLOVE_DIM).zero_()
 #     return prev_mean, next_mean
+
+
+# Elmo
+def get_sentence_elmo(s, embedder):
+    # embedder = ElmoEmbedder(options_file=OPTION_FILE, weight_file=WEIGHT_FILE)
+    s = s.replace('\'ve', ' \'ve')
+    s = s.replace('\'re', ' \'re')
+    s = s.replace('\'ll', ' \'ll')
+    s = s.replace('n\'t', ' n\'t')
+    s = s.replace('\'d', ' \'d')
+    s = s.replace('-', ' ')
+    s = s.replace('\'s', ' \'s')
+    modified_s = re.sub('#', '.', s).strip('.').split('.')
+    modified_s = list(filter(None, modified_s))
+    raw_tokens = []
+    for s in modified_s:
+        s = re.sub('speaker[0-9a-z\-\*]*[0-9]', '', s)
+        s = re.sub('[^a-zA-Z0-9- \n\.]', '', s)
+        s = re.sub('n[0-9][0-9a-z]{4,5}', '', s)
+        s = re.sub('[0-9]t[0-9]+', '', s)
+        s = s.replace(' oclock ', ' o\'clock ')
+        s = s.replace(' ve ', ' \'ve ')
+        s = s.replace(' re ', ' \'re ')
+        s = s.replace(' ll ', ' \'ll ')
+        s = s.replace(' nt ', ' n\'t ')
+        s = s.replace(' d ', ' \'d ')
+        s = s.replace(' s ', ' \'s ')
+        s = s.replace('doeuvres', 'd\'oeuvres')
+        s = s.replace('mumblex', 'mumble')
+        raw_tokens += split_by_whitespace(s)
+    expected_embedding = embedder.embed_sentence(raw_tokens)  # [3, sentence_len, 1024]
+    expected_embedding = np.mean(expected_embedding, axis=1)    # averaging on # of words
+    expected_embedding = np.concatenate(expected_embedding)
+    # expected_embedding = np.mean(expected_embedding, axis=0)
+    expected_embedding_tensor = torch.from_numpy(expected_embedding)
+    return expected_embedding_tensor, raw_tokens
 
 
 def main():
