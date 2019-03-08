@@ -1,24 +1,24 @@
-import re
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import torch
+import argparse
 from collections import defaultdict
+from datetime import datetime
+import os
+import pprint
+import random
+import re
+
+from allennlp.commands.elmo import ElmoEmbedder
+from easydict import EasyDict as edict
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import torch
+from tqdm import tqdm
+import yaml
+
 from models import split_by_whitespace, RatingModel, get_sentence, get_sentence_2d
 from models import get_sentence_elmo
 from models import parse_paragraph_2, parse_paragraph_3
-import torch
-from tqdm import tqdm
-import random
-import argparse
 from utils import mkdir_p
-from datetime import datetime
-from allennlp.commands.elmo import ElmoEmbedder
-import os
-import yaml
-import pprint
-
-from easydict import EasyDict as edict
 
 
 cfg = edict()
@@ -93,9 +93,9 @@ def load_dataset_plus(input0, input1, input2, t):
         dict_item_mean_score_raw = input_df1[['Item', 'StrengthSome']].groupby('Item')['StrengthSome'].apply(list).to_dict()
     else:
         dict_item_mean_score_raw = input_df1[['Item', 'Rating']].groupby('Item')['Rating'].apply(list).to_dict()
-    dict_item_modification_raw = input_df1[['Item','Modification']].groupby('Item')['Modification'].apply(list).to_dict()
-    dict_item_subject_raw = input_df1[['Item','Subjecthood']].groupby('Item')['Subjecthood'].apply(list).to_dict()
-    dict_item_partitive_raw = input_df1[['Item','Partitive']].groupby('Item')['Partitive'].apply(list).to_dict()
+    dict_item_modification_raw = input_df1[['Item', 'Modification']].groupby('Item')['Modification'].apply(list).to_dict()
+    dict_item_subject_raw = input_df1[['Item', 'Subjecthood']].groupby('Item')['Subjecthood'].apply(list).to_dict()
+    dict_item_partitive_raw = input_df1[['Item', 'Partitive']].groupby('Item')['Partitive'].apply(list).to_dict()
     dict_item_mean_score = dict()
     dict_item_sentence = dict()
     dict_item_paragraph = dict()
@@ -130,7 +130,7 @@ def load_dataset(input0, input1, input2, t):
         dict_item_mean_score[k] = v[0]
         dict_item_sentence[k] = dict_item_sentence_raw[k]
         dict_item_paragraph[k] = dict_item_paragraph_raw[k]
-    return (dict_item_mean_score, dict_item_sentence, dict_item_paragraph)
+    return dict_item_mean_score, dict_item_sentence, dict_item_paragraph
 
 
 def random_input(num_examples):
@@ -177,7 +177,6 @@ def main():
     print('Using configurations:')
     pprint.pprint(cfg)
 
-    some_database = cfg.SOME_DATABASE
     curr_path = "./datasets/seed_" + str(cfg.SEED)
     is_train = True
     if cfg.EXPERIMENT_NAME == "":
@@ -185,7 +184,6 @@ def main():
     if opt.mode == 'analyze':
         # pass
         eval_path = "./" + cfg.EXPERIMENT_NAME + "_" + cfg.PREDICTION_TYPE + "_" + str(cfg.SEED)
-        r_model_analyze = None
         if cfg.IS_RANDOM:
             eval_path += "_random"
             load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
@@ -194,7 +192,8 @@ def main():
         epoch_to_analyze = [0, 1, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200]
         epoch_npy = []
         for epoch in epoch_to_analyze:
-            r_model_analyze = RatingModel(eval_path, load_checkpoint=load_path + "/RNet_epoch_" + str(epoch) + ".pth", is_train=cfg.TRAIN.FLAG)
+            cfg.RESUME_DIR = load_path + "/RNet_epoch_" + str(epoch) + ".pth"
+            r_model_analyze = RatingModel(cfg, eval_path)
             epoch_npy.append(r_model_analyze.analyze())
         # -- save numpy file
         # np.save('plus', epoch_npy[3][:, :100])
@@ -257,7 +256,8 @@ def main():
         is_train = False
         load_db = curr_path + "/all_db.csv"
     # labels, contents, contexts, part, mod, sub = load_dataset("./some_database.csv", load_db, "./swbdext.csv", opt.t)
-    labels, contents, contexts = load_dataset(cfg.SOME_DATABASE, load_db, "./swbdext.csv", cfg.PREDICTION_TYPE)
+    labels, contents, contexts = load_dataset(cfg.SOME_DATABASE, load_db,
+                                              "./swbdext.csv", cfg.PREDICTION_TYPE)
 
     curr_max = 0
     curr_min = 100
@@ -296,7 +296,7 @@ def main():
         else:
             for (k, v) in tqdm(contents.items(), total=len(contents)):  # <-- only the target
                 # curr_emb, _ = get_sentence_2d(v[0])
-                context_v = contexts[k]
+                # context_v = contexts[k]
                 if cfg.IS_ELMO:
                     # elmo
                     curr_emb, _ = get_sentence_elmo(v[0], embedder=embedder)
@@ -343,6 +343,7 @@ def main():
         print("sentence_num is not valid.")
         return
 
+    fake_embs = None
     if opt.random_vector:
         print("randomized word vectors")
         if is_train:

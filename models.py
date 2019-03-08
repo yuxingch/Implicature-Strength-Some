@@ -1,36 +1,34 @@
 from itertools import combinations
-import torch
-import torch.nn as nn
-from torch.autograd import Variable
-import torch.optim as optim
-import torchtext.vocab as vocab
-from torch.utils.data.sampler import SequentialSampler, BatchSampler
-import ssl
-import re
 import os
+import re
+import ssl
 import time
-import numpy as np
-import matplotlib.pyplot as plt
-
-import tensorflow as tf
-import visdom
-from easydict import EasyDict as edict
 
 # ELMo
 from allennlp.commands.elmo import ElmoEmbedder
 # from allennlp.modules.elmo import Elmo, batch_to_ids
+from easydict import EasyDict as edict
+import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
+import torch
+from torch.autograd import Variable
+import torch.nn as nn
+import torch.optim as optim
+import torchtext.vocab as vocab
+from torch.utils.data.sampler import SequentialSampler, BatchSampler
 
 from utils import mkdir_p, weights_init, save_model
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-OPTION_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
+OPTION_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
+              "2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
+WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
+              "2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
 
 GLOVE_DIM = 100
-
 glove = vocab.GloVe(name='6B', dim=GLOVE_DIM)
-# print('Loaded {} words'.format(len(glove.itos)))
 
 torch.manual_seed(1)
 
@@ -90,13 +88,16 @@ class RatingModel(object):
         labels = np.expand_dims(labels, axis=1)
         RNet = self.load_network()
         lr = self.lr
-        optimizer = optim.Adam(RNet.parameters(), lr=lr, betas=(self.cfg.TRAIN.COEFF.BETA_1, self.cfg.TRAIN.COEFF.BETA_2))
+        optimizer = optim.Adam(RNet.parameters(),
+                               lr=lr,
+                               betas=(self.cfg.TRAIN.COEFF.BETA_1,
+                                      self.cfg.TRAIN.COEFF.BETA_2))
         epoch = self.cfg.TRAIN.START_EPOCH
         count = self.cfg.TRAIN.START_EPOCH*self.cfg.BATCH_ITEM_NUM
 
         if epoch == 0:
             save_model(RNet, epoch, self.model_dir)
-        while (epoch < self.total_epoch):
+        while epoch < self.total_epoch:
             epoch += 1
             start_t = time.time()
             batch_inds = list(BatchSampler(SequentialSampler(word_embs),
