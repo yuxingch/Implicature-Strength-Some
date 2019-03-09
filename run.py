@@ -299,7 +299,7 @@ def main():
                 # context_v = contexts[k]
                 if cfg.IS_ELMO:
                     # elmo
-                    curr_emb, _ = get_sentence_elmo(v[0], embedder=embedder)
+                    curr_emb, _ = get_sentence_elmo(v[0], embedder=embedder, elmo_mode=cfg.ELMO_MODE)
                 else:
                     # curr_emb, _ = get_sentence(context_v[0])
                     curr_emb, _ = get_sentence(v[0])
