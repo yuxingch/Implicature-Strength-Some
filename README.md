@@ -14,6 +14,20 @@ pip install -r requirements.txt    # Install all the dependencies
 deactivate                         # Exit the virtual environment when you're done
 ```
 
+## Preprocessing Dataset
+Splitting data into training/evaluation sets: (70%/30%)
+```
+python split_dataset.py --seed=SEED --input=PATH/TO/DATASET
+```
+
+Or, can use the default setting by running:
+```
+python split_dataset.py
+```
+The path to the training set will be `./datasets/seed_SEED/train_db.csv`. 
+
+The path to the evaluation set will be `./datasets/seed_SEED/eval_db.csv`.
+
 ## Example
 In `./cfg/`, there is one example configuration file (`./cfg/test_conf.yml`)
 for training and there is one example configuration file (`./cfg/test_eval_conf.yml`) for evaluation. Using configuration files helps us simplify the process of feeding the experiment settings into the model. All tunable parameters are stored in `run.py` as `cfg`. 
