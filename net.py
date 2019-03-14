@@ -1,26 +1,27 @@
 import torch.nn as nn
 
 
-def fc_layer(in_features, out_features):
+def fc_layer(in_features, out_features, dropout):
     return nn.Sequential(nn.Linear(in_features, out_features, bias=True),
                          nn.BatchNorm1d(out_features),
                          nn.ReLU(True),
-                         nn.Dropout(p=0.75))
+                         nn.Dropout(p=dropout))
 
 
 class RateNet(nn.Module):
-    def __init__(self, glove_dim, plus_dim=0):
+    def __init__(self, glove_dim, dropout, plus_dim=0):
         super(RateNet, self).__init__()
         self.glove_dim = glove_dim
         self.plus_dim = plus_dim
         self.input_dim = self.glove_dim + self.plus_dim
         self.fc1, self.fc2 = None, None
         self.get_score = None
+        self.dropout = dropout
         self.define_module()
 
     def define_module(self):
-        self.fc1 = fc_layer(self.input_dim, 64)
-        self.fc2 = fc_layer(64, 32)
+        self.fc1 = fc_layer(self.input_dim, 64, self.dropout[0])
+        self.fc2 = fc_layer(64, 32, self.dropout[1])
 
         self.get_score = nn.Sequential(
             nn.Linear(32, 1, bias=True))
@@ -33,18 +34,19 @@ class RateNet(nn.Module):
 
 
 class RateNetELMo(nn.Module):
-    def __init__(self, glove_dim, plus_dim=0):
+    def __init__(self, glove_dim, dropout, plus_dim=0):
         super(RateNetELMo, self).__init__()
         self.glove_dim = glove_dim
         self.plus_dim = plus_dim
         self.input_dim = self.glove_dim + self.plus_dim
         self.fc1, self.fc2 = None, None
         self.get_score = None
+        self.dropout = dropout
         self.define_module()
 
     def define_module(self):
-        self.fc1 = fc_layer(self.input_dim, self.input_dim//2)
-        self.fc2 = fc_layer(self.input_dim//2, self.input_dim//4)
+        self.fc1 = fc_layer(self.input_dim, self.input_dim//2, self.dropout[0])
+        self.fc2 = fc_layer(self.input_dim//2, self.input_dim//4, self.dropout[1])
 
         self.get_score = nn.Sequential(
             nn.Linear(self.input_dim//4, 1, bias=True))

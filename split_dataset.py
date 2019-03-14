@@ -1,19 +1,24 @@
+import argparse
+import random
+
 import numpy as np
 import pandas as pd
-import random
 
 from utils import mkdir_p
 
-# TODO: 1. for each distinct sentence, compute the average score
-#       2. store the entries with full information in different files
-#          (train/dev/evaluate)
-
 
 def main():
-    seed_num = 0
-    random.seed(seed_num)
+    parser = argparse.ArgumentParser(
+        description='Spitting data into training/evaluation sets ...')
+    parser.add_argument('--seed', dest='seed_num', default=0, type=int)
+    parser.add_argument('--input', dest='input', default='./some_fulldataset.csv')
+    opt = parser.parse_args()
+    print(opt)
+
+    # set random seed
+    random.seed(opt.seed_num)
     # read in the file
-    input_df = pd.read_csv('./some_fulldataset.csv', sep=',')
+    input_df = pd.read_csv(opt.input, sep=',')
     dict_sentence_strength = input_df[['Item', 'StrengthSome']].groupby('Item')['StrengthSome'].apply(list).to_dict()
     dict_sentence_rating = input_df[['Item', 'Rating']].groupby('Item')['Rating'].apply(list).to_dict()
     dict_sentence_partitive = input_df[['Item', 'Partitive']].groupby('Item')['Partitive'].apply(list).to_dict()
@@ -38,8 +43,7 @@ def main():
     random.shuffle(ids)
     train_ids = ids[:954]
     eval_ids = ids[954:]
-    path_nm = './datasets/seed_'+str(seed_num)+'_plus'
-    print(path_nm)
+    path_nm = './datasets/seed_' + str(opt.seed_num)
     mkdir_p(path_nm)
     f = open(path_nm+'/train_db.csv', 'w')
     head_line = "Item,StrengthSome,Rating,Partitive,Modification,Subjecthood\n"

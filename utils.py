@@ -1,16 +1,15 @@
 import os
 import errno
 from copy import deepcopy
-
-from torch.nn import init
-import torch
-import torch.nn as nn
-import torchvision.utils as vutils
-from tqdm import tqdm
-import numpy as np
 import string
 
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from torch.nn import init
+import torch.nn as nn
+import torchvision.utils as vutils
+from tqdm import tqdm
 
 
 def mkdir_p(path):

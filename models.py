@@ -1,36 +1,34 @@
 from itertools import combinations
-import torch
-import torch.nn as nn
-from torch.autograd import Variable
-import torch.optim as optim
-import torchtext.vocab as vocab
-from torch.utils.data.sampler import SequentialSampler, BatchSampler
-import ssl
-import re
 import os
+import re
+import ssl
 import time
-import numpy as np
-import matplotlib.pyplot as plt
-
-import tensorflow as tf
-import visdom
-from easydict import EasyDict as edict
 
 # ELMo
 from allennlp.commands.elmo import ElmoEmbedder
 # from allennlp.modules.elmo import Elmo, batch_to_ids
+from easydict import EasyDict as edict
+import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
+import torch
+from torch.autograd import Variable
+import torch.nn as nn
+import torch.optim as optim
+import torchtext.vocab as vocab
+from torch.utils.data.sampler import SequentialSampler, BatchSampler
 
 from utils import mkdir_p, weights_init, save_model
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-OPTION_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json",
-WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5",
+OPTION_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
+              "2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
+WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
+              "2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
 
 GLOVE_DIM = 100
-
 glove = vocab.GloVe(name='6B', dim=GLOVE_DIM)
-# print('Loaded {} words'.format(len(glove.itos)))
 
 torch.manual_seed(1)
 
@@ -39,7 +37,7 @@ _PAD = torch.randn(GLOVE_DIM,)
 
 
 def build_state_dict(config_net):
-    """Build dictionary to store the state of our net"""
+    """Build dictionary to store the state of our neural net"""
     return torch.load(config_net, map_location=lambda storage, loc: storage)['state_dict']
 
 
@@ -53,6 +51,15 @@ def write_summary(value, tag, summary_writer, global_step):
 class RatingModel(object):
 
     def __init__(self, cfg, output_dir, sn=0):
+        """Intialize RatingModel
+
+        Positional arguments:
+        cfg -- configuration dictionary
+        output_dir -- path to save checkpoints and logs
+
+        Keyword argument:
+        sn -- number of sentences taken into consideration (default 0)
+        """
         self.cfg = cfg
         if self.cfg.TRAIN.FLAG:
             self.model_dir = os.path.join(output_dir, 'Model_' + str(sn) + 'S')
@@ -66,20 +73,23 @@ class RatingModel(object):
         self.load_checkpoint = self.cfg.RESUME_DIR
         self.lr = self.cfg.TRAIN.LR
         self.lr_decay_per_epoch = self.cfg.TRAIN.LR_DECAY_EPOCH
+        self.dropout = [self.cfg.TRAIN.DROPOUT.FC_1, self.cfg.TRAIN.DROPOUT.FC_2]
 
     def load_network(self):
+        """Initialize the network or load from checkpoint"""
         from net import RateNet, RateNet2D, RateNetELMo
         print('initializing neural net')
         RNet = None
         if self.cfg.IS_ELMO:
             if self.cfg.ELMO_MODE == 'concat':
-                RNet = RateNetELMo(3072)
+                RNet = RateNetELMo(3072, self.dropout)
             else:
-                RNet = RateNetELMo(1024)
+                RNet = RateNetELMo(1024, self.dropout)
         else:
-            RNet = RateNet(self.cfg.GLOVE_DIM)
+            RNet = RateNet(self.cfg.GLOVE_DIM, self.dropout)
         RNet.apply(weights_init)
 
+        # Resume from checkpoint
         if self.load_checkpoint != "":
             RNet.load_state_dict(build_state_dict(self.load_checkpoint))
             print(f'Load from: {self.load_checkpoint}')
@@ -87,16 +97,29 @@ class RatingModel(object):
         return RNet
 
     def train(self, word_embs, labels):
+        """Training process
+
+        Positional arguments:
+        word_embs -- vector representations for all examples
+                        if elmo_concat: (954, 3072)
+                        if elmo_avg: (954, 1024)
+                        if GloVe: (954, GLOVE_DIM)
+        labels -- ground truth (954, )
+        """
         labels = np.expand_dims(labels, axis=1)
         RNet = self.load_network()
         lr = self.lr
-        optimizer = optim.Adam(RNet.parameters(), lr=lr, betas=(self.cfg.TRAIN.COEFF.BETA_1, self.cfg.TRAIN.COEFF.BETA_2))
+        optimizer = optim.Adam(RNet.parameters(),
+                               lr=lr,
+                               betas=(self.cfg.TRAIN.COEFF.BETA_1,
+                                      self.cfg.TRAIN.COEFF.BETA_2),
+                               eps=self.cfg.TRAIN.COEFF.EPS)
         epoch = self.cfg.TRAIN.START_EPOCH
         count = self.cfg.TRAIN.START_EPOCH*self.cfg.BATCH_ITEM_NUM
 
         if epoch == 0:
             save_model(RNet, epoch, self.model_dir)
-        while (epoch < self.total_epoch):
+        while epoch < self.total_epoch:
             epoch += 1
             start_t = time.time()
             batch_inds = list(BatchSampler(SequentialSampler(word_embs),
@@ -138,11 +161,20 @@ class RatingModel(object):
         save_model(RNet, self.total_epoch, self.model_dir)
 
     def evaluate(self, word_embs, max_diff, min_value):
+        """Make predictions and evaluate the model
+
+        Positional arguments:
+        word_embs -- vector representations for all examples
+                        if elmo_concat: (408, 3072)
+                        if elmo_avg: (408, 1024)
+                        if GloVe: (408, GLOVE_DIM)
+        max_diff -- for normalization
+        min_value -- for normalization
+        """
         RNet = self.load_network()
         RNet.eval()
 
         num_items = word_embs.shape[0]
-        # print(num_items)
         batch_size = min(num_items, self.batch_size)
 
         rating_lst = []
@@ -158,14 +190,14 @@ class RatingModel(object):
             # output_scores, h = RNet(curr_batch)
             output_scores = RNet(curr_batch)
             # all_hiddens_list.append(h)
-            # print(output_scores.size())
             for curr_score in output_scores.data.tolist():
                 rating_lst.append(curr_score[0]*max_diff+min_value)
             count += batch_size
         # all_hiddens = torch.cat(tuple(all_hiddens_list)).data.numpy()
-        return np.array(rating_lst)  #, all_hiddens
+        return np.array(rating_lst)  # , all_hiddens
 
     def analyze(self):
+        """Analyze weights"""
         RNet = self.load_network()
         RNet.eval()
 
@@ -192,16 +224,6 @@ def split_by_whitespace(sentence):
 
 
 def get_sentence(s, max_len=40):
-    # s = re.sub('[^a-zA-Z0-9 \n\.]', '', s)
-    # raw_tokens = split_by_whitespace(s)
-    # # print(raw_tokens)
-    # n = len(raw_tokens)
-    # if (n < max_len):
-    #     lst = [get_word(w.lower()) for w in raw_tokens]
-    #     # lst += [_PAD] * (max_len - n)
-    # else:
-    #     raw_tokens = raw_tokens[:max_len]
-    #     lst = [get_word(w.lower()) for w in raw_tokens]
     s = s.replace('\'ve', ' \'ve')
     s = s.replace('\'re', ' \'re')
     s = s.replace('\'ll', ' \'ll')
@@ -241,15 +263,6 @@ def get_sentence(s, max_len=40):
 
 
 def get_sentence_2d(s, max_len=32):
-    # s = re.sub('[^a-zA-Z0-9 \n\.]', '', s)
-    # raw_tokens = split_by_whitespace(s)
-    # n = len(raw_tokens)
-    # if (n < max_len):
-    #     lst = [get_word(w.lower()) for w in raw_tokens]
-    #     lst += [_PAD] * (max_len - n)
-    # else:
-    #     raw_tokens = raw_tokens[:max_len]
-    #     lst = [get_word(w.lower()) for w in raw_tokens]
     s = s.replace('\'ve', ' \'ve')
     s = s.replace('\'ll', ' \'ll')
     s = s.replace('n\'t', ' n\'t')
@@ -347,44 +360,10 @@ def parse_paragraph_3(p, target_tokens):  # <--- 3
         next_mean_III = torch.FloatTensor(1, GLOVE_DIM).zero_()   
     return next_mean, next_mean_II, next_mean_III
 
-# def parse_paragraph(p, target_tokens):
-#     ss = re.sub('[^a-zA-Z0-9 \n\.]', '', p).strip('.').split('.')
-#     ls = list(filter(None, ss))
-#     total_len = len(ls)
-#     prev_tokens = None
-#     next_tokens = None
-#     ptr = 0
-#     found = False
-#     for s in ls:
-#         curr_tokens = split_by_whitespace(s)
-#         print(curr_tokens, target_tokens)
-#         if curr_tokens == target_tokens:
-#             print("hi", ptr)
-#             if (ptr+1) < total_len:
-#                 next_tokens = split_by_whitespace(ls[ptr+1])
-#                 found = True
-#             break
-#         prev_tokens = curr_tokens
-#         ptr += 1
-
-#     if prev_tokens and found:
-#         lst_prev = [get_word(w.lower()) for w in prev_tokens]
-#         prev_embs = torch.stack(lst_prev)
-#         prev_mean = torch.mean(prev_embs, 0)
-#     else:
-#         prev_mean = torch.IntTensor(1, GLOVE_DIM).zero_()
-#     if next_tokens:
-#         lst_next = [get_word(w.lower()) for w in next_tokens]
-#         next_embs = torch.stack(lst_next)
-#         next_mean = torch.mean(next_embs, 0)
-#     else:
-#         next_mean = torch.IntTensor(1, GLOVE_DIM).zero_()
-#     return prev_mean, next_mean
-
 
 # Elmo
-def get_sentence_elmo(s, embedder):
-    # embedder = ElmoEmbedder(options_file=OPTION_FILE, weight_file=WEIGHT_FILE)
+def get_sentence_elmo(s, embedder, elmo_mode='concat'):
+    """Get ELMo vector representation for each sentence"""
     s = s.replace('\'ve', ' \'ve')
     s = s.replace('\'re', ' \'re')
     s = s.replace('\'ll', ' \'ll')
@@ -412,8 +391,10 @@ def get_sentence_elmo(s, embedder):
         raw_tokens += split_by_whitespace(s)
     expected_embedding = embedder.embed_sentence(raw_tokens)  # [3, sentence_len, 1024]
     expected_embedding = np.mean(expected_embedding, axis=1)    # averaging on # of words
-    expected_embedding = np.concatenate(expected_embedding)
-    # expected_embedding = np.mean(expected_embedding, axis=0)
+    if elmo_mode == 'concat':
+        expected_embedding = np.concatenate(expected_embedding)
+    elif elmo_mode == 'avg':
+        expected_embedding = np.mean(expected_embedding, axis=0)
     expected_embedding_tensor = torch.from_numpy(expected_embedding)
     return expected_embedding_tensor, raw_tokens
 
