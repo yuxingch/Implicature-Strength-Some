@@ -73,6 +73,7 @@ class RatingModel(object):
         self.load_checkpoint = self.cfg.RESUME_DIR
         self.lr = self.cfg.TRAIN.LR
         self.lr_decay_per_epoch = self.cfg.TRAIN.LR_DECAY_EPOCH
+        self.dropout = [self.cfg.TRAIN.DROPOUT.FC_1, self.cfg.TRAIN.DROPOUT.FC_2]
 
     def load_network(self):
         """Initialize the network or load from checkpoint"""
@@ -81,11 +82,11 @@ class RatingModel(object):
         RNet = None
         if self.cfg.IS_ELMO:
             if self.cfg.ELMO_MODE == 'concat':
-                RNet = RateNetELMo(3072)
+                RNet = RateNetELMo(3072, self.dropout)
             else:
-                RNet = RateNetELMo(1024)
+                RNet = RateNetELMo(1024, self.dropout)
         else:
-            RNet = RateNet(self.cfg.GLOVE_DIM)
+            RNet = RateNet(self.cfg.GLOVE_DIM, self.dropout)
         RNet.apply(weights_init)
 
         # Resume from checkpoint
@@ -111,7 +112,8 @@ class RatingModel(object):
         optimizer = optim.Adam(RNet.parameters(),
                                lr=lr,
                                betas=(self.cfg.TRAIN.COEFF.BETA_1,
-                                      self.cfg.TRAIN.COEFF.BETA_2))
+                                      self.cfg.TRAIN.COEFF.BETA_2),
+                               eps=self.cfg.TRAIN.COEFF.EPS)
         epoch = self.cfg.TRAIN.START_EPOCH
         count = self.cfg.TRAIN.START_EPOCH*self.cfg.BATCH_ITEM_NUM
 

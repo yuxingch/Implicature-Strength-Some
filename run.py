@@ -51,7 +51,11 @@ cfg.TRAIN.LR = 5e-2
 cfg.TRAIN.COEFF = edict()
 cfg.TRAIN.COEFF.BETA_1 = 0.9
 cfg.TRAIN.COEFF.BETA_2 = 0.999
+cfg.TRAIN.COEFF.EPS = 1e-8
 cfg.TRAIN.LR_DECAY_RATE = 0.8
+cfg.TRAIN.DROPOUT = edict()
+cfg.TRAIN.DROPOUT.FC_1 = 0.75
+cfg.TRAIN.DROPOUT.FC_2 = 0.75
 
 GLOVE_DIM = 100
 NOT_EXIST = torch.FloatTensor(1, GLOVE_DIM).zero_()
@@ -379,12 +383,37 @@ def main():
                 preds_decay = r_model_decay.evaluate(fake_embs, max_diff, curr_min)
         else:
             load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
+            max_epoch_dir = None
+            max_value = -1.0
+            max_epoch = None
             for epoch in epoch_lst:
                 cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+".pth"
                 r_model_decay = RatingModel(cfg, eval_path)
                 # preds_decay = r_model_decay.evaluate(torch.stack(content_embs), max_diff, curr_min)
                 preds_decay = r_model_decay.evaluate(content_embs_stack, max_diff, curr_min)
-                print(np.corrcoef(preds_decay, np.array(original_labels))[0, 1])
+                curr_coeff = np.corrcoef(preds_decay, np.array(original_labels))[0, 1]
+                print(curr_coeff)
+                if max_value < curr_coeff:
+                    max_value = curr_coeff
+                    max_epoch_dir = cfg.RESUME_DIR
+                    max_epoch = epoch
+            if cfg.MODE == 'all':
+                # save all predictions
+                cfg.RESUME_DIR = max_epoch_dir
+                r_model_decay = RatingModel(cfg, eval_path)
+                preds_decay = r_model_decay.evaluate(content_embs_stack, max_diff, curr_min)
+                # print('Current max: ', preds_decay.shape, max_epoch, max_epoch_dir, max_value)
+
+                f = open('./0313_rating/all_preds_'+format(max_epoch)+'.csv', 'w')
+                head_line = "Item_ID\toriginal_mean\tpredicted\n"
+                f.write(head_line)
+                for i in range(len(keys)):
+                    k = keys[i]
+                    ori = original_labels[i]
+                    pre = preds_decay[i]
+                    curr_line = k + '\t' + format(ori) + '\t' + format(pre)
+                    f.write(curr_line+"\n")
+                f.close()
 
         # save hidden vector
         # f = open('./0216_rating/train_first_hidden_layer_epoch80.csv', 'w')
