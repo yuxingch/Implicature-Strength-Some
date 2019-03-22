@@ -386,17 +386,19 @@ def main():
             max_epoch_dir = None
             max_value = -1.0
             max_epoch = None
+            curr_coeff_lst = []
             for epoch in epoch_lst:
                 cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+".pth"
                 r_model_decay = RatingModel(cfg, eval_path)
                 # preds_decay = r_model_decay.evaluate(torch.stack(content_embs), max_diff, curr_min)
                 preds_decay = r_model_decay.evaluate(content_embs_stack, max_diff, curr_min)
                 curr_coeff = np.corrcoef(preds_decay, np.array(original_labels))[0, 1]
-                print(curr_coeff)
+                curr_coeff_lst.append(curr_coeff)
                 if max_value < curr_coeff:
                     max_value = curr_coeff
                     max_epoch_dir = cfg.RESUME_DIR
                     max_epoch = epoch
+            print(curr_coeff_lst)
             if cfg.MODE == 'all':
                 # save all predictions
                 cfg.RESUME_DIR = max_epoch_dir

@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 
@@ -120,14 +121,40 @@ class RateNet2D(nn.Module):
         return self.get_score(h)
 
 
-# TODO:
-class BiRNNEncoder(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, num_classes):
-        super(BiRNNEncoder, self).__init__()
-        self.hidden_size = hidden_size
+# Binary LSTM model
+class BiLSTMELMo(nn.Module):
+    """
+    The purpose of this module is to encode a sequence (sentence/paragraph)
+    using a bidirectional LSTM. It feeds the input through LSTM and returns
+    all the hidden states.
+    """
+    def __init__(self, elmo_dim, hidden_dim, num_layers, drop_prob):
+        super(BiLSTMELMo, self).__init__()
+        self.elmo_dim = elmo_dim
+        self.hidden_dim = hidden_dim
         self.num_layers = num_layers
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True)
-        self.fc = nn.Linear(hidden_size*2, num_classes)
+        self.drop_prob = drop_prob
+        self.define_module()
+
+    def define_module(self):
+        self.lstm = nn.LSTM(self.elmo_dim,
+                            self.hidden_dim,
+                            self.num_layers,
+                            batch_first=True,
+                            dropout=self.drop_prob,
+                            bidirectional=True)
 
     def forward(self, x):
-        return
+        """
+
+        x - Tensor shape (batch_size, seq_len, input_size)
+                we need to permute the first and the second axis
+        """
+        input_lens = x.size(0)  # batch size
+        # x = x.permute([1, 0, 2])    # (seq_len, batch, input_size)
+        x = x.reshape(-1, input_lens, self.elmo_dim)
+        h0 = torch.randn(self.num_layers*2, input_lens, self.hidden_dim)
+        c0 = torch.randn(self.num_layers*2, input_lens, self.hidden_dim)
+        output, _ = self.lstm(x, (h0, c0))  # (seq_len, batch, num_directions*hidden_size)
+        output = output.reshape(input_lens, -1, 2*self.hidden_dim)
+        return output
