@@ -39,6 +39,12 @@ cfg.ELMO_MODE = 'concat'
 cfg.SAVE_PREDS = False
 cfg.BATCH_ITEM_NUM = 29
 
+cfg.LSTM = edict()
+cfg.LSTM.FLAG = False
+cfg.LSTM.SEQ_LEN = 30
+cfg.LSTM.HIDDEN_DIM = 200
+cfg.LSTM.DROP_PROB = 0.0
+
 # Training options
 cfg.TRAIN = edict()
 cfg.TRAIN.FLAG = True
@@ -254,7 +260,7 @@ def main():
     elif cfg.MODE == 'train':
         load_db = curr_path + "/train_db.csv"
     elif cfg.MODE == 'eval':
-        load_db = curr_path + "/eval_db.csv"
+        load_db = curr_path + "/train_db.csv"
         is_train = False
     elif cfg.MODE == 'all':
         is_train = False
@@ -289,11 +295,17 @@ def main():
     content_embs_stack = None
 
     if opt.sentence_num == 0:
-        NUMPY_PATH = './datasets/seed_' + str(cfg.SEED)
+        # TODO
+        NUMPY_DIR = './datasets/seed_' + str(cfg.SEED)
         if cfg.IS_ELMO:
-            NUMPY_PATH += '/elmo_' + cfg.ELMO_MODE + '/embs_' + cfg.MODE + '.npy'
+            if cfg.LSTM.FLAG:
+                NUMPY_DIR += '/elmo_' + cfg.ELMO_MODE + '_lstm'
+            else:
+                NUMPY_DIR += '/elmo_' + cfg.ELMO_MODE
+            NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.MODE + '.npy'
         else:
-            NUMPY_PATH += '/embs_' + cfg.MODE + '.npy'
+            NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.MODE + '.npy'
+        mkdir_p(NUMPY_DIR)
         if os.path.isfile(NUMPY_PATH):
             content_embs_np = np.load(NUMPY_PATH)
             content_embs_stack = torch.from_numpy(content_embs_np)
@@ -303,7 +315,10 @@ def main():
                 # context_v = contexts[k]
                 if cfg.IS_ELMO:
                     # elmo
-                    curr_emb, _ = get_sentence_elmo(v[0], embedder=embedder, elmo_mode=cfg.ELMO_MODE)
+                    curr_emb, _ = get_sentence_elmo(v[0], embedder=embedder,
+                                                    elmo_mode=cfg.ELMO_MODE,
+                                                    LSTM=cfg.LSTM.FLAG,
+                                                    seq_len=cfg.LSTM.SEQ_LEN)
                 else:
                     # curr_emb, _ = get_sentence(context_v[0])
                     curr_emb, _ = get_sentence(v[0])
@@ -366,14 +381,14 @@ def main():
             print(save_path)
             r_model = RatingModel(cfg, save_path, sn=opt.sentence_num)
             # r_model.train(torch.stack(content_embs), np.array(normalized_labels), prev_epoch=0)
-            r_model.train(content_embs_stack, np.array(normalized_labels))
+            r_model.train(content_embs_stack.float(), np.array(normalized_labels))
     else:
         eval_path = "./" + cfg.EXPERIMENT_NAME + "_" + cfg.PREDICTION_TYPE + "_" + str(cfg.SEED)
-        epoch_lst = [0, 1]
+        epoch_lst = [0, 1, 2, 4, 6, 8, 10]
         i = 0
-        while i < cfg.TRAIN.TOTAL_EPOCH - cfg.TRAIN.INTERVAL + 1:
-            i += cfg.TRAIN.INTERVAL
-            epoch_lst.append(i)
+        # while i < cfg.TRAIN.TOTAL_EPOCH - cfg.TRAIN.INTERVAL + 1:
+        #     i += cfg.TRAIN.INTERVAL
+        #     epoch_lst.append(i)
         if cfg.IS_RANDOM:
             eval_path += "_random"
             load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
@@ -391,7 +406,7 @@ def main():
                 cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+".pth"
                 r_model_decay = RatingModel(cfg, eval_path)
                 # preds_decay = r_model_decay.evaluate(torch.stack(content_embs), max_diff, curr_min)
-                preds_decay = r_model_decay.evaluate(content_embs_stack, max_diff, curr_min)
+                preds_decay = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min)
                 curr_coeff = np.corrcoef(preds_decay, np.array(original_labels))[0, 1]
                 curr_coeff_lst.append(curr_coeff)
                 if max_value < curr_coeff:

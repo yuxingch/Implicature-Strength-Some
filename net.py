@@ -127,13 +127,18 @@ class BiLSTMELMo(nn.Module):
     The purpose of this module is to encode a sequence (sentence/paragraph)
     using a bidirectional LSTM. It feeds the input through LSTM and returns
     all the hidden states.
+
+    Then, the hidden states will be fed into a fully connected layer to get
+    a downward projection, which will be the input of the prediction layer.
     """
-    def __init__(self, elmo_dim, hidden_dim, num_layers, drop_prob):
+    def __init__(self, elmo_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout):
         super(BiLSTMELMo, self).__init__()
         self.elmo_dim = elmo_dim
+        self.seq_len = seq_len
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
         self.drop_prob = drop_prob
+        self.dropout = dropout
         self.define_module()
 
     def define_module(self):
@@ -143,18 +148,27 @@ class BiLSTMELMo(nn.Module):
                             batch_first=True,
                             dropout=self.drop_prob,
                             bidirectional=True)
+        self.fc = nn.Linear(self.seq_len, 1, bias=True)
+        self.fc1 = fc_layer(self.hidden_dim*self.num_layers, self.hidden_dim, self.dropout[0])
+        self.fc2 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[1])
+        self.get_score = nn.Sequential(
+            nn.Linear(self.hidden_dim//2, 1, bias=True))
 
     def forward(self, x):
         """
 
         x - Tensor shape (batch_size, seq_len, input_size)
                 we need to permute the first and the second axis
+
+        output - Tensor shape (batch_size, 1)
         """
         input_lens = x.size(0)  # batch size
-        # x = x.permute([1, 0, 2])    # (seq_len, batch, input_size)
-        x = x.reshape(-1, input_lens, self.elmo_dim)
         h0 = torch.randn(self.num_layers*2, input_lens, self.hidden_dim)
         c0 = torch.randn(self.num_layers*2, input_lens, self.hidden_dim)
-        output, _ = self.lstm(x, (h0, c0))  # (seq_len, batch, num_directions*hidden_size)
-        output = output.reshape(input_lens, -1, 2*self.hidden_dim)
-        return output
+        x, _ = self.lstm(x, (h0, c0))
+        x = x.permute(0, 2, 1)
+        x = self.fc(x)
+        x = x.squeeze()
+        x = self.fc1(x)
+        x = self.fc2(x)
+        return self.get_score(x)

@@ -74,42 +74,52 @@ class RatingModel(object):
         self.lr = self.cfg.TRAIN.LR
         self.lr_decay_per_epoch = self.cfg.TRAIN.LR_DECAY_EPOCH
         self.dropout = [self.cfg.TRAIN.DROPOUT.FC_1, self.cfg.TRAIN.DROPOUT.FC_2]
+        self.drop_prob = self.cfg.LSTM.DROP_PROB
 
     def load_network(self):
         """Initialize the network or load from checkpoint"""
-        from net import RateNet, RateNet2D, RateNetELMo
+        from net import RateNet, RateNet2D, RateNetELMo, BiLSTMELMo
         print('initializing neural net')
-        RNet = None
+        self.RNet = None
         if self.cfg.IS_ELMO:
             if self.cfg.ELMO_MODE == 'concat':
-                RNet = RateNetELMo(3072, self.dropout)
+                elmo_dim = 3072
             else:
-                RNet = RateNetELMo(1024, self.dropout)
+                elmo_dim = 1024
+            if self.cfg.LSTM.FLAG:
+                # elmo_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout
+                self.RNet = BiLSTMELMo(elmo_dim, self.cfg.LSTM.SEQ_LEN,
+                                       self.cfg.LSTM.HIDDEN_DIM, 2,
+                                       self.drop_prob, self.dropout)
+            else:
+                self.RNet = RateNetELMo(elmo_dim, self.dropout)
         else:
-            RNet = RateNet(self.cfg.GLOVE_DIM, self.dropout)
-        RNet.apply(weights_init)
+            self.RNet = RateNet(self.cfg.GLOVE_DIM, self.dropout)
+        self.RNet.apply(weights_init)
 
         # Resume from checkpoint
         if self.load_checkpoint != "":
-            RNet.load_state_dict(build_state_dict(self.load_checkpoint))
+            self.RNet.load_state_dict(build_state_dict(self.load_checkpoint))
             print(f'Load from: {self.load_checkpoint}')
-
-        return RNet
 
     def train(self, word_embs, labels):
         """Training process
 
         Positional arguments:
         word_embs -- vector representations for all examples
-                        if elmo_concat: (954, 3072)
-                        if elmo_avg: (954, 1024)
+                        if elmo_concat:
+                            if not lstm: (954, 3072)
+                            if lstm: (954, 30, 3072)
+                        if elmo_avg:
+                            if not lstm: (954, 1024)
+                            if lstm: (954, 30, 1024)
                         if GloVe: (954, GLOVE_DIM)
         labels -- ground truth (954, )
         """
         labels = np.expand_dims(labels, axis=1)
-        RNet = self.load_network()
+        self.load_network()
         lr = self.lr
-        optimizer = optim.Adam(RNet.parameters(),
+        optimizer = optim.Adam(self.RNet.parameters(),
                                lr=lr,
                                betas=(self.cfg.TRAIN.COEFF.BETA_1,
                                       self.cfg.TRAIN.COEFF.BETA_2),
@@ -118,7 +128,7 @@ class RatingModel(object):
         count = self.cfg.TRAIN.START_EPOCH*self.cfg.BATCH_ITEM_NUM
 
         if epoch == 0:
-            save_model(RNet, epoch, self.model_dir)
+            save_model(self.RNet, epoch, self.model_dir)
         while epoch < self.total_epoch:
             epoch += 1
             start_t = time.time()
@@ -140,9 +150,9 @@ class RatingModel(object):
                 curr_batch_tensor = Variable(curr_batch, requires_grad=True)
                 real_label_tensor = Variable(torch.from_numpy(real_labels))
 
-                output_scores = RNet(curr_batch_tensor)
+                output_scores = self.RNet(curr_batch_tensor)
 
-                RNet.zero_grad()
+                self.RNet.zero_grad()
                 loss_func = nn.MSELoss()
                 loss = loss_func(output_scores, real_label_tensor.type(torch.FloatTensor))
                 loss.backward()
@@ -156,9 +166,9 @@ class RatingModel(object):
             end_t = time.time()
             print(f'[{epoch}/{self.total_epoch}][{i}/{len(batch_inds)-1}] Loss: {loss:.4f}'
                   f' Total Time: {(end_t-start_t):.2f}sec')
-            if epoch % 20 == 0 or epoch == 1:
-                save_model(RNet, epoch, self.model_dir)
-        save_model(RNet, self.total_epoch, self.model_dir)
+            if epoch % 2 == 0 or epoch == 1:
+                save_model(self.RNet, epoch, self.model_dir)
+        save_model(self.RNet, self.total_epoch, self.model_dir)
 
     def evaluate(self, word_embs, max_diff, min_value):
         """Make predictions and evaluate the model
@@ -171,8 +181,8 @@ class RatingModel(object):
         max_diff -- for normalization
         min_value -- for normalization
         """
-        RNet = self.load_network()
-        RNet.eval()
+        self.load_network()
+        self.RNet.eval()
 
         num_items = word_embs.shape[0]
         batch_size = min(num_items, self.batch_size)
@@ -187,8 +197,8 @@ class RatingModel(object):
                 # break
                 # count = num_items - batch_size
             curr_batch = Variable(word_embs[count:iend])
-            # output_scores, h = RNet(curr_batch)
-            output_scores = RNet(curr_batch)
+            # output_scores, h = self.RNet(curr_batch)
+            output_scores = self.RNet(curr_batch)
             # all_hiddens_list.append(h)
             for curr_score in output_scores.data.tolist():
                 rating_lst.append(curr_score[0]*max_diff+min_value)
@@ -198,10 +208,10 @@ class RatingModel(object):
 
     def analyze(self):
         """Analyze weights"""
-        RNet = self.load_network()
-        RNet.eval()
+        self.load_network()
+        self.RNet.eval()
 
-        w = RNet.conv1.weight.data.numpy()
+        w = self.RNet.conv1.weight.data.numpy()
         # w_max, w_min = np.amax(w), np.amin(w)
         # w_normalized = (w - w_min) / (w_max - w_min) * 255.0
         # return w_normalized
@@ -362,7 +372,7 @@ def parse_paragraph_3(p, target_tokens):  # <--- 3
 
 
 # Elmo
-def get_sentence_elmo(s, embedder, elmo_mode='concat'):
+def get_sentence_elmo(s, embedder, elmo_mode='concat', LSTM=False, seq_len=None):
     """Get ELMo vector representation for each sentence"""
     s = s.replace('\'ve', ' \'ve')
     s = s.replace('\'re', ' \'re')
@@ -390,13 +400,34 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat'):
         s = s.replace('mumblex', 'mumble')
         raw_tokens += split_by_whitespace(s)
     expected_embedding = embedder.embed_sentence(raw_tokens)  # [3, sentence_len, 1024]
-    expected_embedding = np.mean(expected_embedding, axis=1)    # averaging on # of words
-    if elmo_mode == 'concat':
-        expected_embedding = np.concatenate(expected_embedding)
-    elif elmo_mode == 'avg':
-        expected_embedding = np.mean(expected_embedding, axis=0)
-    expected_embedding_tensor = torch.from_numpy(expected_embedding)
+    if not LSTM:
+        expected_embedding = np.mean(expected_embedding, axis=1)    # averaging on # of words
+        if elmo_mode == 'concat':
+            expected_embedding = np.concatenate(expected_embedding)
+        elif elmo_mode == 'avg':
+            expected_embedding = np.mean(expected_embedding, axis=0)
+    else:
+        sentence_len = expected_embedding.shape[1]
+        if elmo_mode == 'concat':
+            # [seq_len, 3024]
+            expected_embedding = np.concatenate(expected_embedding, axis=1)
+        elif elmo_mode == 'avg':
+            expected_embedding = np.mean(expected_embedding, axis=0)
+        # chop/pad
+        expected_embedding_padded = padded(expected_embedding, seq_len)
+    expected_embedding_tensor = torch.from_numpy(expected_embedding_padded)
     return expected_embedding_tensor, raw_tokens
+
+
+def padded(emb, seq_len):
+    sentence_len, dim = emb.shape
+    result = np.zeros((seq_len, dim))
+    if seq_len <= sentence_len:
+        result[:, :] = emb[:seq_len, :]
+    else:
+        result[:sentence_len, :] = emb[:sentence_len, :]
+        result[sentence_len:, :] = np.random.rand((seq_len - sentence_len), dim)
+    return result
 
 
 def main():
