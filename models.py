@@ -9,6 +9,7 @@ from allennlp.commands.elmo import ElmoEmbedder
 # from allennlp.modules.elmo import Elmo, batch_to_ids
 from easydict import EasyDict as edict
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 import numpy as np
 import tensorflow as tf
 import torch
@@ -17,6 +18,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torchtext.vocab as vocab
 from torch.utils.data.sampler import SequentialSampler, BatchSampler
+from torch.nn.utils import clip_grad_value_
+from torch.nn.utils.rnn import pack_padded_sequence
 
 from utils import mkdir_p, weights_init, save_model
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -29,6 +32,8 @@ WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
 
 GLOVE_DIM = 100
 glove = vocab.GloVe(name='6B', dim=GLOVE_DIM)
+
+IMG_DIR = "/Users/yuxing/Desktop/Stanford/Academic/2018-2019/Spring2019/temp/"
 
 torch.manual_seed(1)
 
@@ -74,42 +79,52 @@ class RatingModel(object):
         self.lr = self.cfg.TRAIN.LR
         self.lr_decay_per_epoch = self.cfg.TRAIN.LR_DECAY_EPOCH
         self.dropout = [self.cfg.TRAIN.DROPOUT.FC_1, self.cfg.TRAIN.DROPOUT.FC_2]
+        self.drop_prob = self.cfg.LSTM.DROP_PROB
 
     def load_network(self):
         """Initialize the network or load from checkpoint"""
-        from net import RateNet, RateNet2D, RateNetELMo
+        from net import RateNet, RateNet2D, RateNetELMo, BiLSTMELMo
         print('initializing neural net')
-        RNet = None
+        self.RNet = None
         if self.cfg.IS_ELMO:
             if self.cfg.ELMO_MODE == 'concat':
-                RNet = RateNetELMo(3072, self.dropout)
+                elmo_dim = 3072
             else:
-                RNet = RateNetELMo(1024, self.dropout)
+                elmo_dim = 1024
+            if self.cfg.LSTM.FLAG:
+                # elmo_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout
+                self.RNet = BiLSTMELMo(elmo_dim, self.cfg.LSTM.SEQ_LEN,
+                                       self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
+                                       self.drop_prob, self.dropout)
+            else:
+                self.RNet = RateNetELMo(elmo_dim, self.dropout)
         else:
-            RNet = RateNet(self.cfg.GLOVE_DIM, self.dropout)
-        RNet.apply(weights_init)
+            self.RNet = RateNet(self.cfg.GLOVE_DIM, self.dropout)
+        self.RNet.apply(weights_init)
 
         # Resume from checkpoint
         if self.load_checkpoint != "":
-            RNet.load_state_dict(build_state_dict(self.load_checkpoint))
+            self.RNet.load_state_dict(build_state_dict(self.load_checkpoint))
             print(f'Load from: {self.load_checkpoint}')
 
-        return RNet
-
-    def train(self, word_embs, labels):
+    def train(self, word_embs, labels, s_len=None):
         """Training process
 
         Positional arguments:
         word_embs -- vector representations for all examples
-                        if elmo_concat: (954, 3072)
-                        if elmo_avg: (954, 1024)
+                        if elmo_concat:
+                            if not lstm: (954, 3072)
+                            if lstm: (954, 30, 3072)
+                        if elmo_avg:
+                            if not lstm: (954, 1024)
+                            if lstm: (954, 30, 1024)
                         if GloVe: (954, GLOVE_DIM)
         labels -- ground truth (954, )
         """
         labels = np.expand_dims(labels, axis=1)
-        RNet = self.load_network()
+        self.load_network()
         lr = self.lr
-        optimizer = optim.Adam(RNet.parameters(),
+        optimizer = optim.Adam(self.RNet.parameters(),
                                lr=lr,
                                betas=(self.cfg.TRAIN.COEFF.BETA_1,
                                       self.cfg.TRAIN.COEFF.BETA_2),
@@ -118,7 +133,7 @@ class RatingModel(object):
         count = self.cfg.TRAIN.START_EPOCH*self.cfg.BATCH_ITEM_NUM
 
         if epoch == 0:
-            save_model(RNet, epoch, self.model_dir)
+            save_model(self.RNet, epoch, self.model_dir)
         while epoch < self.total_epoch:
             epoch += 1
             start_t = time.time()
@@ -136,17 +151,27 @@ class RatingModel(object):
             for i, inds in enumerate(batch_inds, 0):
                 real_labels = labels[inds]
                 curr_batch = word_embs[inds]
+                seq_lengths = [s_len[ii] for ii in inds]
+                sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
+                seq_lengths.sort(reverse=True)
+                curr_batch = curr_batch[sort_idx]
+                real_labels = real_labels[sort_idx]
 
                 curr_batch_tensor = Variable(curr_batch, requires_grad=True)
                 real_label_tensor = Variable(torch.from_numpy(real_labels))
 
-                output_scores = RNet(curr_batch_tensor)
+                seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
+                pack = pack_padded_sequence(curr_batch_tensor, seq_lengths, batch_first=True)
+                output_scores = self.RNet(pack, len(seq_lengths))
 
-                RNet.zero_grad()
+                optimizer.zero_grad()
                 loss_func = nn.MSELoss()
                 loss = loss_func(output_scores, real_label_tensor.type(torch.FloatTensor))
                 loss.backward()
-
+                # gradient clipping, if necessary
+                # clip_grad_value_(self.RNet.parameters(), 2)
+                plot_grad_flow(self.RNet.named_parameters(), count)
+                # plot_grad_flow_v0(self.RNet.named_parameters(), count)
                 optimizer.step()
 
                 count += 1
@@ -156,9 +181,9 @@ class RatingModel(object):
             end_t = time.time()
             print(f'[{epoch}/{self.total_epoch}][{i}/{len(batch_inds)-1}] Loss: {loss:.4f}'
                   f' Total Time: {(end_t-start_t):.2f}sec')
-            if epoch % 20 == 0 or epoch == 1:
-                save_model(RNet, epoch, self.model_dir)
-        save_model(RNet, self.total_epoch, self.model_dir)
+            if epoch % 2 == 0 or epoch == 1:
+                save_model(self.RNet, epoch, self.model_dir)
+        save_model(self.RNet, self.total_epoch, self.model_dir)
 
     def evaluate(self, word_embs, max_diff, min_value):
         """Make predictions and evaluate the model
@@ -171,8 +196,8 @@ class RatingModel(object):
         max_diff -- for normalization
         min_value -- for normalization
         """
-        RNet = self.load_network()
-        RNet.eval()
+        self.load_network()
+        self.RNet.eval()
 
         num_items = word_embs.shape[0]
         batch_size = min(num_items, self.batch_size)
@@ -187,8 +212,8 @@ class RatingModel(object):
                 # break
                 # count = num_items - batch_size
             curr_batch = Variable(word_embs[count:iend])
-            # output_scores, h = RNet(curr_batch)
-            output_scores = RNet(curr_batch)
+            # output_scores, h = self.RNet(curr_batch)
+            output_scores = self.RNet(curr_batch)
             # all_hiddens_list.append(h)
             for curr_score in output_scores.data.tolist():
                 rating_lst.append(curr_score[0]*max_diff+min_value)
@@ -198,10 +223,10 @@ class RatingModel(object):
 
     def analyze(self):
         """Analyze weights"""
-        RNet = self.load_network()
-        RNet.eval()
+        self.load_network()
+        self.RNet.eval()
 
-        w = RNet.conv1.weight.data.numpy()
+        w = self.RNet.conv1.weight.data.numpy()
         # w_max, w_min = np.amax(w), np.amin(w)
         # w_normalized = (w - w_min) / (w_max - w_min) * 255.0
         # return w_normalized
@@ -362,7 +387,7 @@ def parse_paragraph_3(p, target_tokens):  # <--- 3
 
 
 # Elmo
-def get_sentence_elmo(s, embedder, elmo_mode='concat'):
+def get_sentence_elmo(s, embedder, elmo_mode='concat', LSTM=False, seq_len=None):
     """Get ELMo vector representation for each sentence"""
     s = s.replace('\'ve', ' \'ve')
     s = s.replace('\'re', ' \'re')
@@ -390,13 +415,89 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat'):
         s = s.replace('mumblex', 'mumble')
         raw_tokens += split_by_whitespace(s)
     expected_embedding = embedder.embed_sentence(raw_tokens)  # [3, sentence_len, 1024]
-    expected_embedding = np.mean(expected_embedding, axis=1)    # averaging on # of words
-    if elmo_mode == 'concat':
-        expected_embedding = np.concatenate(expected_embedding)
-    elif elmo_mode == 'avg':
-        expected_embedding = np.mean(expected_embedding, axis=0)
-    expected_embedding_tensor = torch.from_numpy(expected_embedding)
-    return expected_embedding_tensor, raw_tokens
+    if not LSTM:
+        expected_embedding = np.mean(expected_embedding, axis=1)    # averaging on # of words
+        if elmo_mode == 'concat':
+            expected_embedding = np.concatenate(expected_embedding)
+        elif elmo_mode == 'avg':
+            expected_embedding = np.mean(expected_embedding, axis=0)
+    else:
+        sentence_len = expected_embedding.shape[1]
+        if elmo_mode == 'concat':
+            # [seq_len, 3024]
+            expected_embedding = np.concatenate(expected_embedding, axis=1)
+        elif elmo_mode == 'avg':
+            expected_embedding = np.mean(expected_embedding, axis=0)
+        # chop/pad
+        expected_embedding_padded, sl = padded(expected_embedding, seq_len)
+    expected_embedding_tensor = torch.from_numpy(expected_embedding_padded)
+    return expected_embedding_tensor, sl
+
+
+def padded(emb, seq_len):
+    sentence_len, dim = emb.shape
+    result = np.zeros((seq_len, dim))
+    l = seq_len
+    if seq_len <= sentence_len:
+        result[:, :] = emb[:seq_len, :]
+    else:
+        result[:sentence_len, :] = emb[:sentence_len, :]
+        # result[sentence_len:, :] = np.random.rand((seq_len - sentence_len), dim)
+        result[sentence_len:, :] = 0
+        l = sentence_len
+    return result, l
+
+
+def plot_grad_flow(named_parameters, global_step):
+    '''Plots the gradients flowing through different layers in the net during training.
+    Can be used for checking for possible gradient vanishing / exploding problems.
+    
+    Usage: Plug this function in Trainer class after loss.backwards() as 
+    "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow'''
+    ave_grads = []
+    max_grads= []
+    layers = []
+    for n, p in named_parameters:
+        if(p.requires_grad) and ("bias" not in n):
+            layers.append(n)
+            ave_grads.append(p.grad.abs().mean())
+            max_grads.append(p.grad.abs().max())
+    plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
+    plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
+    plt.hlines(0, 0, len(ave_grads)+1, lw=2, color="k" )
+    plt.xticks(range(0,len(ave_grads), 1), layers, rotation="vertical")
+    plt.xlim(left=0, right=len(ave_grads))
+    plt.ylim(bottom = -0.001, top=0.02) # zoom in on the lower gradient regions
+    plt.xlabel("Layers")
+    plt.ylabel("average gradient")
+    plt.title("Gradient flow at step " + format(global_step))
+    plt.grid(True)
+    plt.legend([mlines.Line2D([0], [0], color="c", lw=4),
+                mlines.Line2D([0], [0], color="b", lw=4),
+                mlines.Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
+    plt.savefig(IMG_DIR + format(global_step))
+    plt.close()
+
+
+def plot_grad_flow_v0(named_parameters, count):
+    ave_grads = []
+    layers = []
+    for n, p in named_parameters:
+        if(p.requires_grad) and ("bias" not in n):
+            layers.append(n)
+            ave_grads.append(p.grad.abs().mean())
+    plt.plot(ave_grads, alpha=0.3, color="b")
+    plt.hlines(0, 0, len(ave_grads)+1, linewidth=1, color="k" )
+    plt.xticks(range(0,len(ave_grads), 1), layers, rotation="vertical")
+    plt.xlim(xmin=0, xmax=len(ave_grads))
+    plt.xlabel("Layers")
+    plt.ylabel("average gradient")
+    plt.title("Gradient flow")
+    plt.grid(True)
+    print("plotting gradient flow at step " + format(count))
+    if count == 27:
+        plt.savefig(IMG_DIR + "epoch0_" + format(count))
+        plt.close()
 
 
 def main():

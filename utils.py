@@ -35,6 +35,18 @@ def weights_init(m):
         m.weight.data.normal_(0.0, 0.02)
         if m.bias is not None:
             m.bias.data.fill_(0.0)
+    elif classname.find('LSTM') != -1:
+        # m.weight.data.normal_(0.0, 0.02)
+        # if m.bias is not None:
+        #     m.bias.data.fill_(0.0)
+        # https://discuss.pytorch.org/t/initializing-rnn-gru-and-lstm-correctly/23605
+        for name, param in m.named_parameters():
+            if 'weight_ih' in name:
+                nn.init.xavier_uniform_(param.data)
+            elif 'weight_hh' in name:
+                nn.init.orthogonal_(param.data)
+            elif 'bias' in name:
+                param.data.fill_(0)
 
 
 def save_model(RNet, epoch, model_dir):

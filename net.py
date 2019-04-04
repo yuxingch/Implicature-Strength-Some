@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 
@@ -120,14 +121,55 @@ class RateNet2D(nn.Module):
         return self.get_score(h)
 
 
-# TODO:
-class BiRNNEncoder(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, num_classes):
-        super(BiRNNEncoder, self).__init__()
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True)
-        self.fc = nn.Linear(hidden_size*2, num_classes)
+# Binary LSTM model
+class BiLSTMELMo(nn.Module):
+    """
+    The purpose of this module is to encode a sequence (sentence/paragraph)
+    using a bidirectional LSTM. It feeds the input through LSTM and returns
+    all the hidden states.
 
-    def forward(self, x):
-        return
+    Then, the hidden states will be fed into a fully connected layer to get
+    a downward projection, which will be the input of the prediction layer.
+    """
+    def __init__(self, elmo_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout):
+        super(BiLSTMELMo, self).__init__()
+        self.elmo_dim = elmo_dim
+        self.seq_len = seq_len
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        self.drop_prob = drop_prob
+        self.dropout = dropout
+        self.define_module()
+
+    def define_module(self):
+        self.lstm = nn.LSTM(self.elmo_dim,
+                            self.hidden_dim,
+                            self.num_layers,
+                            batch_first=True,
+                            dropout=self.drop_prob,
+                            bidirectional=True)
+        self.fc = nn.Linear(self.seq_len, 1, bias=True)
+        self.fc1 = fc_layer(self.hidden_dim*2, self.hidden_dim, self.dropout[0])
+        self.fc2 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[1])
+        self.get_score = nn.Sequential(
+            nn.Linear(self.hidden_dim//2, 1, bias=True))
+
+    def forward(self, x, batch_size):
+        """
+
+        x - Tensor shape (batch_size, seq_len, input_size)
+                we need to permute the first and the second axis
+
+        output - Tensor shape (batch_size, 1)
+        """
+        h0 = torch.randn(self.num_layers*2, batch_size, self.hidden_dim)
+        c0 = torch.randn(self.num_layers*2, batch_size, self.hidden_dim)
+        x, _ = self.lstm(x, (h0, c0))
+        x, _ = nn.utils.rnn.pad_packed_sequence(x, batch_first=True)
+        x = x.reshape(batch_size, self.seq_len, self.hidden_dim*2)
+        x = x.permute(0, 2, 1)
+        x = self.fc(x)
+        x = x.squeeze()
+        x = self.fc1(x)
+        x = self.fc2(x)
+        return self.get_score(x)
