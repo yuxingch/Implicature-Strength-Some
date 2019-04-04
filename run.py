@@ -5,6 +5,7 @@ import os
 import pprint
 import random
 import re
+from statistics import mean
 
 from allennlp.commands.elmo import ElmoEmbedder
 from easydict import EasyDict as edict
@@ -41,9 +42,10 @@ cfg.BATCH_ITEM_NUM = 29
 
 cfg.LSTM = edict()
 cfg.LSTM.FLAG = False
-cfg.LSTM.SEQ_LEN = 30
+cfg.LSTM.SEQ_LEN = 20
 cfg.LSTM.HIDDEN_DIM = 200
-cfg.LSTM.DROP_PROB = 0.0
+cfg.LSTM.DROP_PROB = 0
+cfg.LSTM.LAYERS = 2
 
 # Training options
 cfg.TRAIN = edict()
@@ -302,23 +304,28 @@ def main():
                 NUMPY_DIR += '/elmo_' + cfg.ELMO_MODE + '_lstm'
             else:
                 NUMPY_DIR += '/elmo_' + cfg.ELMO_MODE
-            NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.MODE + '.npy'
+            NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.MODE + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
+            LENGTH_PATH = NUMPY_DIR + "/len_" + cfg.MODE + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
         else:
             NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.MODE + '.npy'
         mkdir_p(NUMPY_DIR)
         if os.path.isfile(NUMPY_PATH):
             content_embs_np = np.load(NUMPY_PATH)
+            content_len_np = np.load(LENGTH_PATH)
+            sl = content_len_np.tolist()
             content_embs_stack = torch.from_numpy(content_embs_np)
         else:
+            sl = []
             for (k, v) in tqdm(contents.items(), total=len(contents)):  # <-- only the target
                 # curr_emb, _ = get_sentence_2d(v[0])
                 # context_v = contexts[k]
                 if cfg.IS_ELMO:
                     # elmo
-                    curr_emb, _ = get_sentence_elmo(v[0], embedder=embedder,
+                    curr_emb, l = get_sentence_elmo(v[0], embedder=embedder,
                                                     elmo_mode=cfg.ELMO_MODE,
                                                     LSTM=cfg.LSTM.FLAG,
                                                     seq_len=cfg.LSTM.SEQ_LEN)
+                    sl.append(l)
                 else:
                     # curr_emb, _ = get_sentence(context_v[0])
                     curr_emb, _ = get_sentence(v[0])
@@ -328,6 +335,15 @@ def main():
                 # return
                 content_embs.append(curr_emb)
                 # content_embs.append(torch.cat((curr_emb, curr_plus)))
+            #     sl.append(get_sentence_elmo(v[0], embedder=embedder,
+            #                                 elmo_mode=cfg.ELMO_MODE,
+            #                                 LSTM=cfg.LSTM.FLAG,
+            #                                 seq_len=cfg.LSTM.SEQ_LEN))
+            # print(mean(sl))
+            # plt.hist(sl, normed=True, bins=30)
+            # plt.show()
+            # return
+            np.save(LENGTH_PATH, np.array(sl))
             content_embs_stack = torch.stack(content_embs)
             np.save(NUMPY_PATH, content_embs_stack.numpy())
     elif opt.sentence_num == 2:
@@ -381,7 +397,7 @@ def main():
             print(save_path)
             r_model = RatingModel(cfg, save_path, sn=opt.sentence_num)
             # r_model.train(torch.stack(content_embs), np.array(normalized_labels), prev_epoch=0)
-            r_model.train(content_embs_stack.float(), np.array(normalized_labels))
+            r_model.train(content_embs_stack.float(), np.array(normalized_labels), sl)
     else:
         eval_path = "./" + cfg.EXPERIMENT_NAME + "_" + cfg.PREDICTION_TYPE + "_" + str(cfg.SEED)
         epoch_lst = [0, 1, 2, 4, 6, 8, 10]

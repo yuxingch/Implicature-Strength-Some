@@ -9,6 +9,7 @@ from allennlp.commands.elmo import ElmoEmbedder
 # from allennlp.modules.elmo import Elmo, batch_to_ids
 from easydict import EasyDict as edict
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 import numpy as np
 import tensorflow as tf
 import torch
@@ -17,6 +18,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torchtext.vocab as vocab
 from torch.utils.data.sampler import SequentialSampler, BatchSampler
+from torch.nn.utils import clip_grad_value_
+from torch.nn.utils.rnn import pack_padded_sequence
 
 from utils import mkdir_p, weights_init, save_model
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -29,6 +32,8 @@ WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
 
 GLOVE_DIM = 100
 glove = vocab.GloVe(name='6B', dim=GLOVE_DIM)
+
+IMG_DIR = "/Users/yuxing/Desktop/Stanford/Academic/2018-2019/Spring2019/temp/"
 
 torch.manual_seed(1)
 
@@ -89,7 +94,7 @@ class RatingModel(object):
             if self.cfg.LSTM.FLAG:
                 # elmo_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout
                 self.RNet = BiLSTMELMo(elmo_dim, self.cfg.LSTM.SEQ_LEN,
-                                       self.cfg.LSTM.HIDDEN_DIM, 2,
+                                       self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
                                        self.drop_prob, self.dropout)
             else:
                 self.RNet = RateNetELMo(elmo_dim, self.dropout)
@@ -102,7 +107,7 @@ class RatingModel(object):
             self.RNet.load_state_dict(build_state_dict(self.load_checkpoint))
             print(f'Load from: {self.load_checkpoint}')
 
-    def train(self, word_embs, labels):
+    def train(self, word_embs, labels, s_len=None):
         """Training process
 
         Positional arguments:
@@ -146,17 +151,27 @@ class RatingModel(object):
             for i, inds in enumerate(batch_inds, 0):
                 real_labels = labels[inds]
                 curr_batch = word_embs[inds]
+                seq_lengths = [s_len[ii] for ii in inds]
+                sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
+                seq_lengths.sort(reverse=True)
+                curr_batch = curr_batch[sort_idx]
+                real_labels = real_labels[sort_idx]
 
                 curr_batch_tensor = Variable(curr_batch, requires_grad=True)
                 real_label_tensor = Variable(torch.from_numpy(real_labels))
 
-                output_scores = self.RNet(curr_batch_tensor)
+                seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
+                pack = pack_padded_sequence(curr_batch_tensor, seq_lengths, batch_first=True)
+                output_scores = self.RNet(pack, len(seq_lengths))
 
-                self.RNet.zero_grad()
+                optimizer.zero_grad()
                 loss_func = nn.MSELoss()
                 loss = loss_func(output_scores, real_label_tensor.type(torch.FloatTensor))
                 loss.backward()
-
+                # gradient clipping, if necessary
+                # clip_grad_value_(self.RNet.parameters(), 2)
+                plot_grad_flow(self.RNet.named_parameters(), count)
+                # plot_grad_flow_v0(self.RNet.named_parameters(), count)
                 optimizer.step()
 
                 count += 1
@@ -414,20 +429,75 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', LSTM=False, seq_len=None)
         elif elmo_mode == 'avg':
             expected_embedding = np.mean(expected_embedding, axis=0)
         # chop/pad
-        expected_embedding_padded = padded(expected_embedding, seq_len)
+        expected_embedding_padded, sl = padded(expected_embedding, seq_len)
     expected_embedding_tensor = torch.from_numpy(expected_embedding_padded)
-    return expected_embedding_tensor, raw_tokens
+    return expected_embedding_tensor, sl
 
 
 def padded(emb, seq_len):
     sentence_len, dim = emb.shape
     result = np.zeros((seq_len, dim))
+    l = seq_len
     if seq_len <= sentence_len:
         result[:, :] = emb[:seq_len, :]
     else:
         result[:sentence_len, :] = emb[:sentence_len, :]
-        result[sentence_len:, :] = np.random.rand((seq_len - sentence_len), dim)
-    return result
+        # result[sentence_len:, :] = np.random.rand((seq_len - sentence_len), dim)
+        result[sentence_len:, :] = 0
+        l = sentence_len
+    return result, l
+
+
+def plot_grad_flow(named_parameters, global_step):
+    '''Plots the gradients flowing through different layers in the net during training.
+    Can be used for checking for possible gradient vanishing / exploding problems.
+    
+    Usage: Plug this function in Trainer class after loss.backwards() as 
+    "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow'''
+    ave_grads = []
+    max_grads= []
+    layers = []
+    for n, p in named_parameters:
+        if(p.requires_grad) and ("bias" not in n):
+            layers.append(n)
+            ave_grads.append(p.grad.abs().mean())
+            max_grads.append(p.grad.abs().max())
+    plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
+    plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
+    plt.hlines(0, 0, len(ave_grads)+1, lw=2, color="k" )
+    plt.xticks(range(0,len(ave_grads), 1), layers, rotation="vertical")
+    plt.xlim(left=0, right=len(ave_grads))
+    plt.ylim(bottom = -0.001, top=0.02) # zoom in on the lower gradient regions
+    plt.xlabel("Layers")
+    plt.ylabel("average gradient")
+    plt.title("Gradient flow at step " + format(global_step))
+    plt.grid(True)
+    plt.legend([mlines.Line2D([0], [0], color="c", lw=4),
+                mlines.Line2D([0], [0], color="b", lw=4),
+                mlines.Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
+    plt.savefig(IMG_DIR + format(global_step))
+    plt.close()
+
+
+def plot_grad_flow_v0(named_parameters, count):
+    ave_grads = []
+    layers = []
+    for n, p in named_parameters:
+        if(p.requires_grad) and ("bias" not in n):
+            layers.append(n)
+            ave_grads.append(p.grad.abs().mean())
+    plt.plot(ave_grads, alpha=0.3, color="b")
+    plt.hlines(0, 0, len(ave_grads)+1, linewidth=1, color="k" )
+    plt.xticks(range(0,len(ave_grads), 1), layers, rotation="vertical")
+    plt.xlim(xmin=0, xmax=len(ave_grads))
+    plt.xlabel("Layers")
+    plt.ylabel("average gradient")
+    plt.title("Gradient flow")
+    plt.grid(True)
+    print("plotting gradient flow at step " + format(count))
+    if count == 27:
+        plt.savefig(IMG_DIR + "epoch0_" + format(count))
+        plt.close()
 
 
 def main():
