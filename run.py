@@ -44,7 +44,7 @@ cfg.LSTM = edict()
 cfg.LSTM.FLAG = False
 cfg.LSTM.SEQ_LEN = 20
 cfg.LSTM.HIDDEN_DIM = 200
-cfg.LSTM.DROP_PROB = 0
+cfg.LSTM.DROP_PROB = 0.2
 cfg.LSTM.LAYERS = 2
 
 # Training options
@@ -262,7 +262,7 @@ def main():
     elif cfg.MODE == 'train':
         load_db = curr_path + "/train_db.csv"
     elif cfg.MODE == 'eval':
-        load_db = curr_path + "/train_db.csv"
+        load_db = curr_path + "/eval_db.csv"
         is_train = False
     elif cfg.MODE == 'all':
         is_train = False
@@ -285,6 +285,12 @@ def main():
     keys = []
     for (k, v) in labels.items():
         keys.append(k)
+        # int_v = int(v)
+        # if int_v + 0.5 < v:
+        #     v = int_v
+        # else:
+        #     v = int_v + 1
+        # original_labels.append(int(v))
         original_labels.append(float(v))
         labels[k] = (float(v) - curr_min) / max_diff
         normalized_labels.append(labels[k])

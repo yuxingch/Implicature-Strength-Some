@@ -1,0 +1,19 @@
+SOME_DATABASE: './some_database.csv'
+CONFIG_NAME: 'elmo_concat_lstm'
+EXPERIMENT_NAME: 'elmo_concat_lstm'
+
+TRAIN:
+    LR: 0.002
+    TOTAL_EPOCH: 2
+    LR_DECAY_EPOCH: 10
+    LR_DECAY_RATE: 0.8
+    DROPOUT:
+        FC_1: 0.75
+        FC_2: 0.75
+
+LSTM:
+    FLAG: True
+    SEQ_LEN: 30
+    HIDDEN_DIM: 1536
+    LAYERS: 2
+    DROP_PROB: 0.3

@@ -147,14 +147,20 @@ class BiLSTMELMo(nn.Module):
                             self.num_layers,
                             batch_first=True,
                             dropout=self.drop_prob,
-                            bidirectional=True)
-        self.fc = nn.Linear(self.seq_len, 1, bias=True)
-        self.fc1 = fc_layer(self.hidden_dim*2, self.hidden_dim, self.dropout[0])
-        self.fc2 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[1])
+                            # bidirectional=True)
+                            bidirectional=False)
+        # self.fc = nn.Linear(self.seq_len, 1, bias=True)
+        # bidirectional:
+        # self.fc1 = fc_layer(self.hidden_dim*2, self.hidden_dim, self.dropout[0])
+        # self.fc2 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[1])
+        # single direction:
+        self.fc1 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[0])
+        self.fc2 = fc_layer(self.hidden_dim//2, self.hidden_dim//4, self.dropout[1])
         self.get_score = nn.Sequential(
-            nn.Linear(self.hidden_dim//2, 1, bias=True))
+            nn.Linear(self.hidden_dim//4, 1, bias=True))
+            # nn.Linear(self.hidden_dim//2, 1, bias=True))
 
-    def forward(self, x, batch_size):
+    def forward(self, x, batch_size, seq_lens):
         """
 
         x - Tensor shape (batch_size, seq_len, input_size)
@@ -162,14 +168,30 @@ class BiLSTMELMo(nn.Module):
 
         output - Tensor shape (batch_size, 1)
         """
-        h0 = torch.randn(self.num_layers*2, batch_size, self.hidden_dim)
-        c0 = torch.randn(self.num_layers*2, batch_size, self.hidden_dim)
+        # h0 = torch.randn(self.num_layers*2, batch_size, self.hidden_dim)
+        # c0 = torch.randn(self.num_layers*2, batch_size, self.hidden_dim)
+        h0 = torch.randn(self.num_layers, batch_size, self.hidden_dim)
+        c0 = torch.randn(self.num_layers, batch_size, self.hidden_dim)
+        # x, (hn, cn) = self.lstm(x, (h0, c0))
+        # x = hn.view(self.num_layers, 2, batch_size, self.hidden_dim)
+        # x = x[-1]
+        # x = torch.cat((x[0], x[1]), dim=1)
         x, _ = self.lstm(x, (h0, c0))
         x, _ = nn.utils.rnn.pad_packed_sequence(x, batch_first=True)
-        x = x.reshape(batch_size, self.seq_len, self.hidden_dim*2)
+        # x = x.reshape(batch_size, self.seq_len, self.hidden_dim*2)
+        x = x.reshape(batch_size, seq_lens[0], self.hidden_dim)
         x = x.permute(0, 2, 1)
-        x = self.fc(x)
-        x = x.squeeze()
+        mask = torch.zeros(x.size())
+        # print(seq_lens)
+        for i in range(batch_size):
+            mask[i, :, seq_lens[i]-1] = 1
+        x = x * mask
+        # print(x.requires_grad)
+        x = x.sum(dim=2)
+        # x = self.fc(x)
+        # x = x.squeeze()
         x = self.fc1(x)
         x = self.fc2(x)
+        # x = self.fc3(x)
+        # x = self.fc4(x)
         return self.get_score(x)

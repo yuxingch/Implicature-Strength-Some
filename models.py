@@ -155,14 +155,16 @@ class RatingModel(object):
                 sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
                 seq_lengths.sort(reverse=True)
                 curr_batch = curr_batch[sort_idx]
+                curr_batch = curr_batch[:, :seq_lengths[0], :]
                 real_labels = real_labels[sort_idx]
 
                 curr_batch_tensor = Variable(curr_batch, requires_grad=True)
                 real_label_tensor = Variable(torch.from_numpy(real_labels))
 
-                seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
+                # real_seq_len = seq_lengths.copy()
+                # seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
                 pack = pack_padded_sequence(curr_batch_tensor, seq_lengths, batch_first=True)
-                output_scores = self.RNet(pack, len(seq_lengths))
+                output_scores = self.RNet(pack, len(seq_lengths), seq_lengths)
 
                 optimizer.zero_grad()
                 loss_func = nn.MSELoss()
@@ -398,7 +400,7 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', LSTM=False, seq_len=None)
     s = s.replace('\'s', ' \'s')
     modified_s = re.sub('#', '.', s).strip('.').split('.')
     modified_s = list(filter(None, modified_s))
-    raw_tokens = []
+    raw_tokens = ['<bos>']
     for s in modified_s:
         s = re.sub('speaker[0-9a-z\-\*]*[0-9]', '', s)
         s = re.sub('[^a-zA-Z0-9- \n\.]', '', s)
@@ -414,7 +416,8 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', LSTM=False, seq_len=None)
         s = s.replace('doeuvres', 'd\'oeuvres')
         s = s.replace('mumblex', 'mumble')
         raw_tokens += split_by_whitespace(s)
-    expected_embedding = embedder.embed_sentence(raw_tokens)  # [3, sentence_len, 1024]
+    raw_tokens.append('<eos>')
+    expected_embedding = embedder.embed_sentence(raw_tokens)  # [3, actual_sentence_len+2, 1024]
     if not LSTM:
         expected_embedding = np.mean(expected_embedding, axis=1)    # averaging on # of words
         if elmo_mode == 'concat':
@@ -435,11 +438,12 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', LSTM=False, seq_len=None)
 
 
 def padded(emb, seq_len):
-    sentence_len, dim = emb.shape
+    sentence_len, dim = emb.shape  # sentence_len = actual_sentence_len + 2
     result = np.zeros((seq_len, dim))
     l = seq_len
     if seq_len <= sentence_len:
-        result[:, :] = emb[:seq_len, :]
+        result[:seq_len-1, :] = emb[:seq_len-1, :]
+        result[-1, :] = emb[-1, :]  # <eos>
     else:
         result[:sentence_len, :] = emb[:sentence_len, :]
         # result[sentence_len:, :] = np.random.rand((seq_len - sentence_len), dim)
@@ -457,11 +461,13 @@ def plot_grad_flow(named_parameters, global_step):
     ave_grads = []
     max_grads= []
     layers = []
+    print('------------\n', global_step)
     for n, p in named_parameters:
         if(p.requires_grad) and ("bias" not in n):
             layers.append(n)
             ave_grads.append(p.grad.abs().mean())
             max_grads.append(p.grad.abs().max())
+            print(n, ': ', p.grad.abs().max())
     plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
     plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
     plt.hlines(0, 0, len(ave_grads)+1, lw=2, color="k" )
@@ -475,7 +481,7 @@ def plot_grad_flow(named_parameters, global_step):
     plt.legend([mlines.Line2D([0], [0], color="c", lw=4),
                 mlines.Line2D([0], [0], color="b", lw=4),
                 mlines.Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
-    plt.savefig(IMG_DIR + format(global_step))
+    plt.savefig(IMG_DIR + format(global_step), bbox_inches='tight')
     plt.close()
 
 
@@ -496,7 +502,7 @@ def plot_grad_flow_v0(named_parameters, count):
     plt.grid(True)
     print("plotting gradient flow at step " + format(count))
     if count == 27:
-        plt.savefig(IMG_DIR + "epoch0_" + format(count))
+        plt.savefig(IMG_DIR + "epoch0_" + format(count), bbox_inches='tight')
         plt.close()
 
 
