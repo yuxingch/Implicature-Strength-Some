@@ -47,6 +47,13 @@ cfg.ELMO_MODE = 'concat'                  # avg/concat, take the average of the 
 cfg.SAVE_PREDS = False                    # save the predictions as .csv file
 cfg.BATCH_ITEM_NUM = 29                   # number of items in each batch
 
+cfg.LSTM = edict()
+cfg.LSTM.FLAG = False                     # whether using LSTM encoder or not
+cfg.LSTM.SEQ_LEN = 20                     # the maximum sentence length, including `'<bos>'` and `'<eos>'`
+cfg.LSTM.HIDDEN_DIM = 512                 # LSTM hidden dimension
+cfg.LSTM.DROP_PROB = 0.2                  # LSTM drop probability, when number of layers is > 1
+cfg.LSTM.LAYERS = 2                       # number of LSTM layers
+
 # Training options
 cfg.TRAIN = edict()
 cfg.TRAIN.FLAG = True                     # True/False, whether we're in training mode
