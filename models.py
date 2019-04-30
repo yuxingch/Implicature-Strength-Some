@@ -17,7 +17,7 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.optim as optim
 import torchtext.vocab as vocab
-from torch.utils.data.sampler import SequentialSampler, BatchSampler
+from torch.utils.data.sampler import SequentialSampler, BatchSampler, RandomSampler
 from torch.nn.utils import clip_grad_value_
 from torch.nn.utils.rnn import pack_padded_sequence
 
@@ -63,7 +63,7 @@ class RatingModel(object):
         output_dir -- path to save checkpoints and logs
 
         Keyword argument:
-        sn -- number of sentences taken into consideration (default 0)
+        sn -- number of previous sentences taken into consideration (default 0)
         """
         self.cfg = cfg
         if self.cfg.TRAIN.FLAG:
@@ -80,6 +80,7 @@ class RatingModel(object):
         self.lr_decay_per_epoch = self.cfg.TRAIN.LR_DECAY_EPOCH
         self.dropout = [self.cfg.TRAIN.DROPOUT.FC_1, self.cfg.TRAIN.DROPOUT.FC_2]
         self.drop_prob = self.cfg.LSTM.DROP_PROB
+        self.interval = self.cfg.TRAIN.INTERVAL
 
     def load_network(self):
         """Initialize the network or load from checkpoint"""
@@ -95,7 +96,7 @@ class RatingModel(object):
                 # elmo_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout
                 self.RNet = BiLSTMELMo(elmo_dim, self.cfg.LSTM.SEQ_LEN,
                                        self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
-                                       self.drop_prob, self.dropout)
+                                       self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION)
             else:
                 self.RNet = RateNetELMo(elmo_dim, self.dropout)
         else:
@@ -137,7 +138,7 @@ class RatingModel(object):
         while epoch < self.total_epoch:
             epoch += 1
             start_t = time.time()
-            batch_inds = list(BatchSampler(SequentialSampler(word_embs),
+            batch_inds = list(BatchSampler(RandomSampler(word_embs),
                                            batch_size=self.batch_size,
                                            drop_last=True))
 
@@ -147,7 +148,7 @@ class RatingModel(object):
                 print(f'learning rate updated: {lr}')
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = lr
-
+            total_loss = 0
             for i, inds in enumerate(batch_inds, 0):
                 real_labels = labels[inds]
                 curr_batch = word_embs[inds]
@@ -155,21 +156,25 @@ class RatingModel(object):
                 sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
                 seq_lengths.sort(reverse=True)
                 curr_batch = curr_batch[sort_idx]
+                curr_batch = curr_batch[:, :seq_lengths[0], :]
                 real_labels = real_labels[sort_idx]
 
                 curr_batch_tensor = Variable(curr_batch, requires_grad=True)
                 real_label_tensor = Variable(torch.from_numpy(real_labels))
 
-                seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
+                # real_seq_len = seq_lengths.copy()
+                # seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
                 pack = pack_padded_sequence(curr_batch_tensor, seq_lengths, batch_first=True)
-                output_scores = self.RNet(pack, len(seq_lengths))
+                output_scores = self.RNet(pack, len(seq_lengths), seq_lengths)
 
                 optimizer.zero_grad()
                 loss_func = nn.MSELoss()
                 loss = loss_func(output_scores, real_label_tensor.type(torch.FloatTensor))
+                total_loss += loss.item()
                 loss.backward()
+
                 # gradient clipping, if necessary
-                # clip_grad_value_(self.RNet.parameters(), 2)
+                clip_grad_value_(self.RNet.parameters(), 2)
                 plot_grad_flow(self.RNet.named_parameters(), count)
                 # plot_grad_flow_v0(self.RNet.named_parameters(), count)
                 optimizer.step()
@@ -179,13 +184,14 @@ class RatingModel(object):
                     write_summary(loss, 'loss', self.summary_writer, count)
 
             end_t = time.time()
-            print(f'[{epoch}/{self.total_epoch}][{i}/{len(batch_inds)-1}] Loss: {loss:.4f}'
+            print(f'[{epoch}/{self.total_epoch}][{i}/{len(batch_inds)-1}] Loss: {total_loss:.4f}'
                   f' Total Time: {(end_t-start_t):.2f}sec')
-            if epoch % 2 == 0 or epoch == 1:
+            if epoch % self.interval == 0 or epoch == 1:
                 save_model(self.RNet, epoch, self.model_dir)
+        # save checkpoint for the last epoch
         save_model(self.RNet, self.total_epoch, self.model_dir)
 
-    def evaluate(self, word_embs, max_diff, min_value):
+    def evaluate(self, word_embs, max_diff, min_value, sl):
         """Make predictions and evaluate the model
 
         Positional arguments:
@@ -211,12 +217,26 @@ class RatingModel(object):
                 iend = num_items
                 # break
                 # count = num_items - batch_size
-            curr_batch = Variable(word_embs[count:iend])
+            # curr_batch = Variable(word_embs[count:iend])
+            curr_batch = word_embs[count:iend]
+            seq_lengths = sl[count:iend]
+            sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
+            seq_lengths.sort(reverse=True)
+            curr_batch = curr_batch[sort_idx]
+            curr_batch = curr_batch[:, :seq_lengths[0], :]
+            curr_batch = Variable(curr_batch)
+            pack = pack_padded_sequence(curr_batch, seq_lengths, batch_first=True)
             # output_scores, h = self.RNet(curr_batch)
-            output_scores = self.RNet(curr_batch)
+            output_scores = self.RNet(pack, len(seq_lengths), seq_lengths)
+            output_scores = output_scores.data.tolist()
+            temp_rating = [0]*len(sort_idx)
+            cnt = 0
+            for s in sort_idx:
+                temp_rating[s] = output_scores[cnt][0]
+                cnt += 1
             # all_hiddens_list.append(h)
-            for curr_score in output_scores.data.tolist():
-                rating_lst.append(curr_score[0]*max_diff+min_value)
+            for curr_score in temp_rating:
+                rating_lst.append(curr_score*max_diff+min_value)
             count += batch_size
         # all_hiddens = torch.cat(tuple(all_hiddens_list)).data.numpy()
         return np.array(rating_lst)  # , all_hiddens
@@ -279,7 +299,6 @@ def get_sentence(s, max_len=40):
     for w in raw_tokens:
         curr_emb = get_word(w.lower())
         if torch.all(torch.eq(curr_emb, _UNK)):
-            print(w)
             continue
         else:
             lst.append(curr_emb)
@@ -398,7 +417,7 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', LSTM=False, seq_len=None)
     s = s.replace('\'s', ' \'s')
     modified_s = re.sub('#', '.', s).strip('.').split('.')
     modified_s = list(filter(None, modified_s))
-    raw_tokens = []
+    raw_tokens = ['<bos>']
     for s in modified_s:
         s = re.sub('speaker[0-9a-z\-\*]*[0-9]', '', s)
         s = re.sub('[^a-zA-Z0-9- \n\.]', '', s)
@@ -414,7 +433,8 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', LSTM=False, seq_len=None)
         s = s.replace('doeuvres', 'd\'oeuvres')
         s = s.replace('mumblex', 'mumble')
         raw_tokens += split_by_whitespace(s)
-    expected_embedding = embedder.embed_sentence(raw_tokens)  # [3, sentence_len, 1024]
+    raw_tokens.append('<eos>')
+    expected_embedding = embedder.embed_sentence(raw_tokens)  # [3, actual_sentence_len+2, 1024]
     if not LSTM:
         expected_embedding = np.mean(expected_embedding, axis=1)    # averaging on # of words
         if elmo_mode == 'concat':
@@ -435,11 +455,12 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', LSTM=False, seq_len=None)
 
 
 def padded(emb, seq_len):
-    sentence_len, dim = emb.shape
+    sentence_len, dim = emb.shape  # sentence_len = actual_sentence_len + 2
     result = np.zeros((seq_len, dim))
     l = seq_len
     if seq_len <= sentence_len:
-        result[:, :] = emb[:seq_len, :]
+        result[:seq_len-1, :] = emb[:seq_len-1, :]
+        result[-1, :] = emb[-1, :]  # <eos>
     else:
         result[:sentence_len, :] = emb[:sentence_len, :]
         # result[sentence_len:, :] = np.random.rand((seq_len - sentence_len), dim)
@@ -451,17 +472,19 @@ def padded(emb, seq_len):
 def plot_grad_flow(named_parameters, global_step):
     '''Plots the gradients flowing through different layers in the net during training.
     Can be used for checking for possible gradient vanishing / exploding problems.
-    
+
     Usage: Plug this function in Trainer class after loss.backwards() as 
     "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow'''
     ave_grads = []
-    max_grads= []
+    max_grads = []
     layers = []
+    print('------------\n', global_step)
     for n, p in named_parameters:
         if(p.requires_grad) and ("bias" not in n):
             layers.append(n)
             ave_grads.append(p.grad.abs().mean())
             max_grads.append(p.grad.abs().max())
+            print(n, ': ', p.grad.abs().max())
     plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
     plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
     plt.hlines(0, 0, len(ave_grads)+1, lw=2, color="k" )
@@ -475,7 +498,7 @@ def plot_grad_flow(named_parameters, global_step):
     plt.legend([mlines.Line2D([0], [0], color="c", lw=4),
                 mlines.Line2D([0], [0], color="b", lw=4),
                 mlines.Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
-    plt.savefig(IMG_DIR + format(global_step))
+    plt.savefig(IMG_DIR + format(global_step), bbox_inches='tight')
     plt.close()
 
 
@@ -496,7 +519,7 @@ def plot_grad_flow_v0(named_parameters, count):
     plt.grid(True)
     print("plotting gradient flow at step " + format(count))
     if count == 27:
-        plt.savefig(IMG_DIR + "epoch0_" + format(count))
+        plt.savefig(IMG_DIR + "epoch0_" + format(count), bbox_inches='tight')
         plt.close()
 
 

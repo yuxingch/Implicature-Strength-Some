@@ -1,0 +1,13 @@
+allennlp==0.8.3
+easydict==1.9
+matplotlib==3.0.3
+numpy==1.16.2
+pandas==0.24.1
+PyYAML==3.13
+torch==0.4.0
+torchfile==0.1.0
+torchvision==0.2.1
+tensorflow==1.12.0
+tqdm==4.31.1
+scipy==1.1.0
+allennlp==0.8.2
