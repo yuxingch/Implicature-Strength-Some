@@ -17,7 +17,7 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.optim as optim
 import torchtext.vocab as vocab
-from torch.utils.data.sampler import SequentialSampler, BatchSampler
+from torch.utils.data.sampler import SequentialSampler, BatchSampler, RandomSampler
 from torch.nn.utils import clip_grad_value_
 from torch.nn.utils.rnn import pack_padded_sequence
 
@@ -63,7 +63,7 @@ class RatingModel(object):
         output_dir -- path to save checkpoints and logs
 
         Keyword argument:
-        sn -- number of sentences taken into consideration (default 0)
+        sn -- number of previous sentences taken into consideration (default 0)
         """
         self.cfg = cfg
         if self.cfg.TRAIN.FLAG:
@@ -80,6 +80,7 @@ class RatingModel(object):
         self.lr_decay_per_epoch = self.cfg.TRAIN.LR_DECAY_EPOCH
         self.dropout = [self.cfg.TRAIN.DROPOUT.FC_1, self.cfg.TRAIN.DROPOUT.FC_2]
         self.drop_prob = self.cfg.LSTM.DROP_PROB
+        self.interval = self.cfg.TRAIN.INTERVAL
 
     def load_network(self):
         """Initialize the network or load from checkpoint"""
@@ -95,7 +96,7 @@ class RatingModel(object):
                 # elmo_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout
                 self.RNet = BiLSTMELMo(elmo_dim, self.cfg.LSTM.SEQ_LEN,
                                        self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
-                                       self.drop_prob, self.dropout)
+                                       self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION)
             else:
                 self.RNet = RateNetELMo(elmo_dim, self.dropout)
         else:
@@ -137,7 +138,7 @@ class RatingModel(object):
         while epoch < self.total_epoch:
             epoch += 1
             start_t = time.time()
-            batch_inds = list(BatchSampler(SequentialSampler(word_embs),
+            batch_inds = list(BatchSampler(RandomSampler(word_embs),
                                            batch_size=self.batch_size,
                                            drop_last=True))
 
@@ -147,7 +148,7 @@ class RatingModel(object):
                 print(f'learning rate updated: {lr}')
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = lr
-
+            total_loss = 0
             for i, inds in enumerate(batch_inds, 0):
                 real_labels = labels[inds]
                 curr_batch = word_embs[inds]
@@ -169,9 +170,11 @@ class RatingModel(object):
                 optimizer.zero_grad()
                 loss_func = nn.MSELoss()
                 loss = loss_func(output_scores, real_label_tensor.type(torch.FloatTensor))
+                total_loss += loss.item()
                 loss.backward()
+
                 # gradient clipping, if necessary
-                # clip_grad_value_(self.RNet.parameters(), 2)
+                clip_grad_value_(self.RNet.parameters(), 2)
                 plot_grad_flow(self.RNet.named_parameters(), count)
                 # plot_grad_flow_v0(self.RNet.named_parameters(), count)
                 optimizer.step()
@@ -181,13 +184,14 @@ class RatingModel(object):
                     write_summary(loss, 'loss', self.summary_writer, count)
 
             end_t = time.time()
-            print(f'[{epoch}/{self.total_epoch}][{i}/{len(batch_inds)-1}] Loss: {loss:.4f}'
+            print(f'[{epoch}/{self.total_epoch}][{i}/{len(batch_inds)-1}] Loss: {total_loss:.4f}'
                   f' Total Time: {(end_t-start_t):.2f}sec')
-            if epoch % 2 == 0 or epoch == 1:
+            if epoch % self.interval == 0 or epoch == 1:
                 save_model(self.RNet, epoch, self.model_dir)
+        # save checkpoint for the last epoch
         save_model(self.RNet, self.total_epoch, self.model_dir)
 
-    def evaluate(self, word_embs, max_diff, min_value):
+    def evaluate(self, word_embs, max_diff, min_value, sl):
         """Make predictions and evaluate the model
 
         Positional arguments:
@@ -213,12 +217,26 @@ class RatingModel(object):
                 iend = num_items
                 # break
                 # count = num_items - batch_size
-            curr_batch = Variable(word_embs[count:iend])
+            # curr_batch = Variable(word_embs[count:iend])
+            curr_batch = word_embs[count:iend]
+            seq_lengths = sl[count:iend]
+            sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
+            seq_lengths.sort(reverse=True)
+            curr_batch = curr_batch[sort_idx]
+            curr_batch = curr_batch[:, :seq_lengths[0], :]
+            curr_batch = Variable(curr_batch)
+            pack = pack_padded_sequence(curr_batch, seq_lengths, batch_first=True)
             # output_scores, h = self.RNet(curr_batch)
-            output_scores = self.RNet(curr_batch)
+            output_scores = self.RNet(pack, len(seq_lengths), seq_lengths)
+            output_scores = output_scores.data.tolist()
+            temp_rating = [0]*len(sort_idx)
+            cnt = 0
+            for s in sort_idx:
+                temp_rating[s] = output_scores[cnt][0]
+                cnt += 1
             # all_hiddens_list.append(h)
-            for curr_score in output_scores.data.tolist():
-                rating_lst.append(curr_score[0]*max_diff+min_value)
+            for curr_score in temp_rating:
+                rating_lst.append(curr_score*max_diff+min_value)
             count += batch_size
         # all_hiddens = torch.cat(tuple(all_hiddens_list)).data.numpy()
         return np.array(rating_lst)  # , all_hiddens
@@ -281,7 +299,6 @@ def get_sentence(s, max_len=40):
     for w in raw_tokens:
         curr_emb = get_word(w.lower())
         if torch.all(torch.eq(curr_emb, _UNK)):
-            print(w)
             continue
         else:
             lst.append(curr_emb)
@@ -455,11 +472,11 @@ def padded(emb, seq_len):
 def plot_grad_flow(named_parameters, global_step):
     '''Plots the gradients flowing through different layers in the net during training.
     Can be used for checking for possible gradient vanishing / exploding problems.
-    
+
     Usage: Plug this function in Trainer class after loss.backwards() as 
     "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow'''
     ave_grads = []
-    max_grads= []
+    max_grads = []
     layers = []
     print('------------\n', global_step)
     for n, p in named_parameters:
