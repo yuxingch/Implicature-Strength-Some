@@ -53,20 +53,25 @@ cfg.LSTM.SEQ_LEN = 20                     # the maximum sentence length, includi
 cfg.LSTM.HIDDEN_DIM = 512                 # LSTM hidden dimension
 cfg.LSTM.DROP_PROB = 0.2                  # LSTM drop probability, when number of layers is > 1
 cfg.LSTM.LAYERS = 2                       # number of LSTM layers
+cfg.LSTM.BIDIRECTION = True               # use bidirectional LSTM or not
 
 # Training options
 cfg.TRAIN = edict()
 cfg.TRAIN.FLAG = True                     # True/False, whether we're in training mode
 cfg.TRAIN.BATCH_SIZE = 32                 # batch size
 cfg.TRAIN.TOTAL_EPOCH = 200               # total number of epochs to run
-cfg.TRAIN.INTERVAL = 20                   # save the checkpoint for every ### epochs
+cfg.TRAIN.INTERVAL = 4                    # save the checkpoint for every _ epochs
 cfg.TRAIN.START_EPOCH = 0                 # starting epoch
 cfg.TRAIN.LR_DECAY_EPOCH = 20             # decrease the learning rate for every ### epochs
 cfg.TRAIN.LR = 5e-2                       # intial learning rate
 cfg.TRAIN.COEFF = edict()
 cfg.TRAIN.COEFF.BETA_1 = 0.9              # coefficient for Adam optimizer
 cfg.TRAIN.COEFF.BETA_2 = 0.999            # coefficient for Adam optimizer
+cfg.TRAIN.COEFF.EPS = 1e-8                # coefficient for Adam optimizer
 cfg.TRAIN.LR_DECAY_RATE = 0.8             # decay rate for the learning rate
+cfg.TRAIN.DROPOUT = edict()
+cfg.TRAIN.DROPOUT.FC_1 = 0.75             # drop out prob in fully connected layer 1
+cfg.TRAIN.DROPOUT.FC_2 = 0.75             # drop out prob in fully connected layer 2
 ```
 
 User can also use the command-line arguments to specify some of these values:
