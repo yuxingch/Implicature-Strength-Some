@@ -236,7 +236,9 @@ def main():
     content_embs_np = None
     content_embs_stack = None
 
-    NUMPY_DIR = './datasets/seed_' + str(cfg.SEED) + 'pre_' + str(opt.sentence_num)
+    NUMPY_DIR = './datasets/seed_' + str(cfg.SEED)
+    if opt.sentence_num > 0:
+        NUMPY_DIR += '_contextual'
     if cfg.IS_ELMO:
         if cfg.LSTM.FLAG:
             NUMPY_DIR += '/elmo_' + cfg.ELMO_MODE + '_lstm'
