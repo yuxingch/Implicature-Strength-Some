@@ -133,9 +133,10 @@ class RatingModel(object):
         epoch = self.cfg.TRAIN.START_EPOCH
         count = self.cfg.TRAIN.START_EPOCH*self.cfg.BATCH_ITEM_NUM
 
+        count_loss = []
         if epoch == 0:
             save_model(self.RNet, epoch, self.model_dir)
-        while epoch < self.total_epoch:
+        while epoch <= self.total_epoch:
             epoch += 1
             start_t = time.time()
             batch_inds = list(BatchSampler(RandomSampler(word_embs),
@@ -144,7 +145,7 @@ class RatingModel(object):
 
             if epoch % self.lr_decay_per_epoch == 0:
                 # update learning rate
-                lr *= self.cfg.TRAIN.LR_DECAY_RATE
+                lr = self.lr * (self.cfg.TRAIN.LR_DECAY_RATE ** (epoch / self.lr_decay_per_epoch))
                 print(f'learning rate updated: {lr}')
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = lr
@@ -175,20 +176,25 @@ class RatingModel(object):
 
                 # gradient clipping, if necessary
                 clip_grad_value_(self.RNet.parameters(), 2)
-                plot_grad_flow(self.RNet.named_parameters(), count)
+                # plot_grad_flow(self.RNet.named_parameters(), count)
                 # plot_grad_flow_v0(self.RNet.named_parameters(), count)
                 optimizer.step()
 
                 count += 1
-                if i % 10 == 0:
-                    write_summary(loss, 'loss', self.summary_writer, count)
-
+                if count % 3 == 0 or count == 1:
+                    # write_summary(loss, 'loss', self.summary_writer, count)
+                    count_loss.append((count, loss))
             end_t = time.time()
-            print(f'[{epoch}/{self.total_epoch}][{i}/{len(batch_inds)-1}] Loss: {total_loss:.4f}'
+            print(f'[{epoch}/{self.total_epoch}][{i+1}/{len(batch_inds)}] Loss: {total_loss:.4f}'
                   f' Total Time: {(end_t-start_t):.2f}sec')
             if epoch % self.interval == 0 or epoch == 1:
+                for (a, b) in count_loss:
+                    write_summary(b, 'loss', self.summary_writer, a)
+                count_loss = []
                 save_model(self.RNet, epoch, self.model_dir)
         # save checkpoint for the last epoch
+        for (a, b) in count_loss:
+            write_summary(b, 'loss', self.summary_writer, a)
         save_model(self.RNet, self.total_epoch, self.model_dir)
 
     def evaluate(self, word_embs, max_diff, min_value, sl):
@@ -406,7 +412,7 @@ def parse_paragraph_3(p, target_tokens):  # <--- 3
 
 
 # Elmo
-def get_sentence_elmo(s, embedder, elmo_mode='concat', LSTM=False, seq_len=None):
+def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM=False, seq_len=None):
     """Get ELMo vector representation for each sentence"""
     s = s.replace('\'ve', ' \'ve')
     s = s.replace('\'re', ' \'re')
@@ -449,7 +455,10 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', LSTM=False, seq_len=None)
         elif elmo_mode == 'avg':
             expected_embedding = np.mean(expected_embedding, axis=0)
         # chop/pad
-        expected_embedding_padded, sl = padded(expected_embedding, seq_len)
+        if not_contextual:
+            expected_embedding_padded, sl = padded(expected_embedding, seq_len)
+        else:
+            expected_embedding_padded, sl = context_padded(expected_embedding, seq_len)
     expected_embedding_tensor = torch.from_numpy(expected_embedding_padded)
     return expected_embedding_tensor, sl
 
@@ -466,6 +475,20 @@ def padded(emb, seq_len):
         # result[sentence_len:, :] = np.random.rand((seq_len - sentence_len), dim)
         result[sentence_len:, :] = 0
         l = sentence_len
+    return result, l
+
+
+def context_padded(emb, seq_len):
+    context_len, dim = emb.shape
+    result = np.zeros((seq_len, dim))
+    l = seq_len
+    if seq_len <= context_len:
+        result[0, :] = emb[0, :]    # <bos>
+        result[1:, :] = emb[context_len-seq_len+1:, :]
+    else:
+        result[:context_len, :] = emb[:context_len, :]
+        result[context_len:, :] = 0
+        l = context_len
     return result, l
 
 

@@ -246,6 +246,8 @@ def main():
             NUMPY_DIR += '/elmo_' + cfg.ELMO_MODE
         NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.MODE + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
         LENGTH_PATH = NUMPY_DIR + "/len_" + cfg.MODE + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
+        # NUMPY_PATH = NUMPY_DIR + '/embs_' + 'train' + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
+        # LENGTH_PATH = NUMPY_DIR + "/len_" + 'train' + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
     else:
         NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.MODE + '.npy'
     mkdir_p(NUMPY_DIR)
@@ -267,6 +269,7 @@ def main():
             if cfg.IS_ELMO:
                 curr_emb, l = get_sentence_elmo(input_text, embedder=embedder,
                                                 elmo_mode=cfg.ELMO_MODE,
+                                                not_contextual=cfg.SINGLE_SENTENCE,
                                                 LSTM=cfg.LSTM.FLAG,
                                                 seq_len=cfg.LSTM.SEQ_LEN)
                 sl.append(l)
@@ -305,6 +308,7 @@ def main():
         while i < cfg.TRAIN.TOTAL_EPOCH - cfg.TRAIN.INTERVAL + 1:
             i += cfg.TRAIN.INTERVAL
             epoch_lst.append(i)
+        print('epochs to eval: ', epoch_lst)
         if cfg.IS_RANDOM:
             eval_path += "_random"
             load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
