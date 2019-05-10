@@ -2,7 +2,7 @@
 `RatingModel` used to predict the implicature strength rating for *some (but not all)*.
 
 ## Latest Version
-`0.0.4`: enable config file to keep track of experiment settings
+Able to run ELMo-LSTM (single sentence/contextual)
 
 ## Installation
 To set up the virtual environment (python3) to run the script:
@@ -11,6 +11,7 @@ sudo pip install virtualenv        # You will need to do this only once
 virtualenv -p python3 .env         # Creates a virtual environment with python3
 source .env/bin/activate           # Activate the virtual environment
 pip install -r requirements.txt    # Install all the dependencies
+pip install allennlp               # Need to manually install allennlp
 deactivate                         # Exit the virtual environment when you're done
 ```
 
