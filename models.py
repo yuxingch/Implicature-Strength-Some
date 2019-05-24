@@ -1,7 +1,9 @@
 from itertools import combinations
+import logging
 import os
 import re
 import ssl
+import sys
 import time
 
 # ELMo
@@ -24,6 +26,8 @@ from torch.nn.utils.rnn import pack_padded_sequence
 from utils import mkdir_p, weights_init, save_model
 ssl._create_default_https_context = ssl._create_unverified_context
 
+
+logging.basicConfig(level=logging.INFO)
 
 OPTION_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
               "2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
@@ -85,7 +89,7 @@ class RatingModel(object):
     def load_network(self):
         """Initialize the network or load from checkpoint"""
         from net import RateNet, RateNet2D, RateNetELMo, BiLSTMELMo
-        print('initializing neural net')
+        logging.info('initializing neural net')
         self.RNet = None
         if self.cfg.IS_ELMO:
             if self.cfg.ELMO_MODE == 'concat':
@@ -106,7 +110,7 @@ class RatingModel(object):
         # Resume from checkpoint
         if self.load_checkpoint != "":
             self.RNet.load_state_dict(build_state_dict(self.load_checkpoint))
-            print(f'Load from: {self.load_checkpoint}')
+            logging.info(f'Load from: {self.load_checkpoint}')
 
     def train(self, word_embs, labels, s_len=None):
         """Training process
@@ -146,7 +150,7 @@ class RatingModel(object):
             if epoch % self.lr_decay_per_epoch == 0:
                 # update learning rate
                 lr = self.lr * (self.cfg.TRAIN.LR_DECAY_RATE ** (epoch / self.lr_decay_per_epoch))
-                print(f'learning rate updated: {lr}')
+                logging.info(f'learning rate updated: {lr}')
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = lr
             total_loss = 0
@@ -185,8 +189,8 @@ class RatingModel(object):
                     # write_summary(loss, 'loss', self.summary_writer, count)
                     count_loss.append((count, loss))
             end_t = time.time()
-            print(f'[{epoch}/{self.total_epoch}][{i+1}/{len(batch_inds)}] Loss: {total_loss:.4f}'
-                  f' Total Time: {(end_t-start_t):.2f}sec')
+            logging.info(f'[{epoch}/{self.total_epoch}][{i+1}/{len(batch_inds)}] Loss: {total_loss:.4f}'
+                         f' Total Time: {(end_t-start_t):.2f}sec')
             if epoch % self.interval == 0 or epoch == 1:
                 for (a, b) in count_loss:
                     write_summary(b, 'loss', self.summary_writer, a)
