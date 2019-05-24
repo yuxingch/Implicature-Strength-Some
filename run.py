@@ -1,11 +1,13 @@
 import argparse
 from collections import defaultdict
 from datetime import datetime
+import logging
 import os
 import pprint
 import random
 import re
 from statistics import mean
+import sys
 
 from allennlp.commands.elmo import ElmoEmbedder
 from easydict import EasyDict as edict
@@ -22,6 +24,8 @@ from models import parse_paragraph_2, parse_paragraph_3
 from utils import mkdir_p
 
 
+logging.basicConfig(level=logging.INFO)
+
 cfg = edict()
 cfg.SOME_DATABASE = './some_database.csv'
 cfg.CONFIG_NAME = ''
@@ -37,6 +41,7 @@ cfg.IS_ELMO = True
 cfg.ELMO_MODE = 'concat'
 cfg.SAVE_PREDS = False
 cfg.BATCH_ITEM_NUM = 29
+cfg.PREDON = 'eval'
 
 cfg.LSTM = edict()
 cfg.LSTM.FLAG = False
@@ -155,12 +160,20 @@ def main():
             cfg.TRAIN.FLAG = False
             cfg.MODE = opt.mode
 
-    print('Using configurations:')
-    pprint.pprint(cfg)
+    # print('Using configurations:')
+    # pprint.pprint(cfg)
 
     curr_path = "./datasets/seed_" + str(cfg.SEED)
     if cfg.EXPERIMENT_NAME == "":
         cfg.EXPERIMENT_NAME = datetime.now().strftime('%m_%d_%H_%M')
+    log_path = os.path.join(cfg.EXPERIMENT_NAME, "Logging")
+    mkdir_p(log_path)
+    file_handler = logging.FileHandler(os.path.join(log_path, cfg.MODE+"_log.txt"))
+    logging.getLogger().addHandler(file_handler)
+
+    logging.info('Using configurations:')
+    logging.info(pprint.pformat(cfg))
+
     if cfg.MODE == 'analyze':
         # pass
         eval_path = "./" + cfg.EXPERIMENT_NAME + "_" + cfg.PREDICTION_TYPE + "_" + str(cfg.SEED)
@@ -208,7 +221,7 @@ def main():
     elif cfg.MODE == 'train':
         load_db = curr_path + "/train_db.csv"
     elif cfg.MODE == 'eval':
-        load_db = curr_path + "/eval_db.csv"
+        load_db = curr_path + "/" + cfg.PREDON + "_db.csv"
     elif cfg.MODE == 'all':
         load_db = curr_path + "/all_db.csv"
     # labels, contents, contexts, part, mod, sub = load_dataset("./some_database.csv", load_db, "./swbdext.csv", opt.t)
@@ -237,20 +250,19 @@ def main():
     content_embs_stack = None
 
     NUMPY_DIR = './datasets/seed_' + str(cfg.SEED)
-    if opt.sentence_num > 0:
+    if not cfg.SINGLE_SENTENCE:
         NUMPY_DIR += '_contextual'
     if cfg.IS_ELMO:
         if cfg.LSTM.FLAG:
             NUMPY_DIR += '/elmo_' + cfg.ELMO_MODE + '_lstm'
         else:
             NUMPY_DIR += '/elmo_' + cfg.ELMO_MODE
-        NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.MODE + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
-        LENGTH_PATH = NUMPY_DIR + "/len_" + cfg.MODE + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
-        # NUMPY_PATH = NUMPY_DIR + '/embs_' + 'train' + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
-        # LENGTH_PATH = NUMPY_DIR + "/len_" + 'train' + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
+        NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
+        LENGTH_PATH = NUMPY_DIR + "/len_" + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
     else:
         NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.MODE + '.npy'
     mkdir_p(NUMPY_DIR)
+    print(NUMPY_PATH)
     if os.path.isfile(NUMPY_PATH):
         content_embs_np = np.load(NUMPY_PATH)
         content_len_np = np.load(LENGTH_PATH)
@@ -308,7 +320,8 @@ def main():
         while i < cfg.TRAIN.TOTAL_EPOCH - cfg.TRAIN.INTERVAL + 1:
             i += cfg.TRAIN.INTERVAL
             epoch_lst.append(i)
-        print('epochs to eval: ', epoch_lst)
+        #epoch_lst = [55, 60, 65, 70, 75, 80]
+        logging.info(f'epochs to eval: {epoch_lst}')
         if cfg.IS_RANDOM:
             eval_path += "_random"
             load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
@@ -326,7 +339,6 @@ def main():
                 cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+".pth"
                 r_model_decay = RatingModel(cfg, eval_path)
                 preds_decay = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min, sl)
-                print()
                 curr_coeff = np.corrcoef(preds_decay, np.array(original_labels))[0, 1]
                 curr_coeff_lst.append(curr_coeff)
                 if max_value < curr_coeff:
@@ -336,7 +348,7 @@ def main():
                 if cfg.SAVE_PREDS:
                     pred_file_path = eval_path + '/Preds'
                     mkdir_p(pred_file_path)
-                    new_file_name = pred_file_path + '/eval_preds_rating_epoch' + format(epoch) + '.csv'
+                    new_file_name = pred_file_path + '/train_preds_rating_epoch' + format(epoch) + '.csv'
                     f = open(new_file_name, 'w')
                     head_line = "Item_ID\toriginal_mean\tpredicted\n"
                     print(f'Start writing predictions to file:\n{new_file_name}\n...')
