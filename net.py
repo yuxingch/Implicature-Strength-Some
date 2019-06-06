@@ -158,11 +158,11 @@ class BiLSTMELMo(nn.Module):
         else:
             x = x.reshape(batch_size, seq_lens[0], self.hidden_dim)
         x = x.permute(0, 2, 1)
-        mask = torch.zeros(x.size())
+        # mask = torch.zeros(x.size())
 
-        for i in range(batch_size):
-            mask[i, :, seq_lens[i]-1] = 1
-        x = x * mask  # (batch_size, hidden_dim, max_seq_len)
+        # for i in range(batch_size):
+        #    mask[i, :, seq_lens[i]-1] = 1
+        # x = x * mask  # (batch_size, hidden_dim, max_seq_len)
         # x = x.sum(dim=2)  # (batch_size, hidden_dim) <--- used when there is no attention layer
         x = self.attention(x, seq_lens)
         x = self.fc1(x)
