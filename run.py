@@ -260,7 +260,8 @@ def main():
         NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
         LENGTH_PATH = NUMPY_DIR + "/len_" + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
     else:
-        NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.MODE + '.npy'
+        NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.PREDON + '.npy'
+        LENGTH_PATH = NUMPY_DIR + '/len_' + cfg.PREDON + '.npy'
     mkdir_p(NUMPY_DIR)
     print(NUMPY_PATH)
     if os.path.isfile(NUMPY_PATH):
@@ -286,10 +287,11 @@ def main():
                                                 seq_len=cfg.LSTM.SEQ_LEN)
                 sl.append(l)
             else:
-                curr_emb, _ = get_sentence(input_text)
+                curr_emb, l = get_sentence(input_text, seq_len=cfg.LSTM.SEQ_LEN)
+                sl.append(l)
             content_embs.append(curr_emb)
-        if cfg.IS_ELMO:
-            np.save(LENGTH_PATH, np.array(sl))
+        #if cfg.IS_ELMO:
+        np.save(LENGTH_PATH, np.array(sl))
         content_embs_stack = torch.stack(content_embs)
         np.save(NUMPY_PATH, content_embs_stack.numpy())
 
@@ -348,7 +350,7 @@ def main():
                 if cfg.SAVE_PREDS:
                     pred_file_path = eval_path + '/Preds'
                     mkdir_p(pred_file_path)
-                    new_file_name = pred_file_path + '/train_preds_rating_epoch' + format(epoch) + '.csv'
+                    new_file_name = pred_file_path + '/' + cfg.PREDON + '_preds_rating_epoch' + format(epoch) + '.csv'
                     f = open(new_file_name, 'w')
                     head_line = "Item_ID\toriginal_mean\tpredicted\n"
                     print(f'Start writing predictions to file:\n{new_file_name}\n...')
