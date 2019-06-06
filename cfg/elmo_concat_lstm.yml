@@ -4,9 +4,10 @@ EXPERIMENT_NAME: 'elmo_concat_lstm'
 
 TRAIN:
     LR: 0.01
-    TOTAL_EPOCH: 10
+    TOTAL_EPOCH: 80
     LR_DECAY_EPOCH: 5
     LR_DECAY_RATE: 0.8
+    INTERVAL: 5
     DROPOUT:
         FC_1: 0.0
         FC_2: 0.0

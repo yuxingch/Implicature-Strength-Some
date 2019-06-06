@@ -43,6 +43,8 @@ torch.manual_seed(1)
 
 _UNK = torch.randn(GLOVE_DIM,)
 _PAD = torch.randn(GLOVE_DIM,)
+_BOS = torch.randn(GLOVE_DIM,)
+_EOS = torch.randn(GLOVE_DIM,)
 
 
 def build_state_dict(config_net):
@@ -104,7 +106,9 @@ class RatingModel(object):
             else:
                 self.RNet = RateNetELMo(elmo_dim, self.dropout)
         else:
-            self.RNet = RateNet(self.cfg.GLOVE_DIM, self.dropout)
+            #self.RNet = RateNet(self.cfg.GLOVE_DIM, self.dropout)
+            self.RNet = BiLSTMELMo(100, self.cfg.LSTM.SEQ_LEN, self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
+                                   self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION)
         self.RNet.apply(weights_init)
 
         # Resume from checkpoint
@@ -278,7 +282,7 @@ def split_by_whitespace(sentence):
     return [w for w in words if w]
 
 
-def get_sentence(s, max_len=40):
+def get_sentence(s, seq_len=30):
     s = s.replace('\'ve', ' \'ve')
     s = s.replace('\'re', ' \'re')
     s = s.replace('\'ll', ' \'ll')
@@ -305,15 +309,22 @@ def get_sentence(s, max_len=40):
         s = s.replace('mumblex', 'mumble')
         raw_tokens += split_by_whitespace(s)
     # lst = [get_word(w.lower()) for w in raw_tokens]
-    lst = []
+    lst = [_BOS]
     for w in raw_tokens:
         curr_emb = get_word(w.lower())
         if torch.all(torch.eq(curr_emb, _UNK)):
             continue
         else:
             lst.append(curr_emb)
+    lst.append(_EOS)
     all_embs = torch.stack(lst)
-    return torch.mean(all_embs, 0), raw_tokens  # embedding_size
+    #if not LSTM:
+        #return torch.mean(all_embs, 0), raw_tokens
+    sentence_len = len(lst)
+    expected_embedding_padded, sl = context_padded(all_embs, seq_len)
+    expected_embedding_tensor = torch.from_numpy(expected_embedding_padded)
+    return expected_embedding_tensor, sl
+    #return torch.mean(all_embs, 0), raw_tokens  # embedding_size
 
 
 def get_sentence_2d(s, max_len=32):
