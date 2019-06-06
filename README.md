@@ -2,7 +2,8 @@
 `RatingModel` used to predict the implicature strength rating for *some (but not all)*.
 
 ## Latest Version
-Able to run ELMo-LSTM (single sentence/contextual)
+- Able to run ELMo-LSTM (single sentence/contextual)
+- Add an extra self-attention layer (draft version 6/6/2019)
 
 ## Installation
 To set up the virtual environment (python3) to run the script:
@@ -47,6 +48,7 @@ cfg.IS_ELMO = True                        # use ELMo
 cfg.ELMO_MODE = 'concat'                  # avg/concat, take the average of the ELMo vectors/concatenate the vectors
 cfg.SAVE_PREDS = False                    # save the predictions as .csv file
 cfg.BATCH_ITEM_NUM = 29                   # number of items in each batch
+cfg.PREDON = 'eval'                       # which file we want to make predictions on
 
 cfg.LSTM = edict()
 cfg.LSTM.FLAG = False                     # whether using LSTM encoder or not
