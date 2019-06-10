@@ -174,7 +174,7 @@ class RatingModel(object):
                 # real_seq_len = seq_lengths.copy()
                 # seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
                 pack = pack_padded_sequence(curr_batch_tensor, seq_lengths, batch_first=True)
-                output_scores = self.RNet(pack, len(seq_lengths), seq_lengths)
+                output_scores, _ = self.RNet(pack, len(seq_lengths), seq_lengths)
 
                 optimizer.zero_grad()
                 loss_func = nn.MSELoss()
@@ -225,12 +225,16 @@ class RatingModel(object):
         rating_lst = []
         count = 0
         all_hiddens_list = []
+        all_attn = np.zeros((408, 8, self.cfg.LSTM.SEQ_LEN))
+        diff = 0
         while count < num_items:
             iend = count + batch_size
             if iend > num_items:
+                diff = iend - num_items
                 iend = num_items
                 # break
-                # count = num_items - batch_size
+                count = num_items - batch_size
+                #print(count, diff, iend)
             # curr_batch = Variable(word_embs[count:iend])
             curr_batch = word_embs[count:iend]
             seq_lengths = sl[count:iend]
@@ -241,19 +245,25 @@ class RatingModel(object):
             curr_batch = Variable(curr_batch)
             pack = pack_padded_sequence(curr_batch, seq_lengths, batch_first=True)
             # output_scores, h = self.RNet(curr_batch)
-            output_scores = self.RNet(pack, len(seq_lengths), seq_lengths)
+            output_scores, attn_weights = self.RNet(pack, len(seq_lengths), seq_lengths)
             output_scores = output_scores.data.tolist()
             temp_rating = [0]*len(sort_idx)
             cnt = 0
+            revert_attn_weights = np.zeros(attn_weights.shape)
             for s in sort_idx:
                 temp_rating[s] = output_scores[cnt][0]
+                revert_attn_weights[s] = attn_weights[cnt]
                 cnt += 1
+            temp_rating = temp_rating[diff:]
+            revert_attn_weights = revert_attn_weights[diff:]
+            all_attn[count+diff:iend] = revert_attn_weights
             # all_hiddens_list.append(h)
             for curr_score in temp_rating:
                 rating_lst.append(curr_score*max_diff+min_value)
             count += batch_size
         # all_hiddens = torch.cat(tuple(all_hiddens_list)).data.numpy()
-        return np.array(rating_lst)  # , all_hiddens
+        #print(len(rating_lst))
+        return np.array(rating_lst), all_attn  # , all_hiddens
 
     def analyze(self):
         """Analyze weights"""

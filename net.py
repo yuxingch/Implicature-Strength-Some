@@ -164,10 +164,10 @@ class BiLSTMELMo(nn.Module):
         #    mask[i, :, seq_lens[i]-1] = 1
         # x = x * mask  # (batch_size, hidden_dim, max_seq_len)
         # x = x.sum(dim=2)  # (batch_size, hidden_dim) <--- used when there is no attention layer
-        x = self.attention(x, seq_lens)
+        x, attn_weights = self.attention(x, seq_lens)
         x = self.fc1(x)
         x = self.fc2(x)
-        return self.get_score(x)
+        return self.get_score(x), attn_weights
 
 
 # TODO: Self-Attention Layer
@@ -212,4 +212,4 @@ class SelfAttention(nn.Module):
         mask = self.get_mask(scores, seq_lens)
         scores = self.masked_softmax(scores, mask)
         weighted_x = torch.matmul(scores, x.permute(0, 2, 1))
-        return torch.sum(weighted_x, 1)/self.attn_size
+        return torch.sum(weighted_x, 1)/self.attn_size, scores.data.numpy()
