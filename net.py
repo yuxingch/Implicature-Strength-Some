@@ -158,16 +158,17 @@ class BiLSTMELMo(nn.Module):
         else:
             x = x.reshape(batch_size, seq_lens[0], self.hidden_dim)
         x = x.permute(0, 2, 1)
-        # mask = torch.zeros(x.size())
+        #mask = torch.zeros(x.size())
 
-        # for i in range(batch_size):
+        #for i in range(batch_size):
         #    mask[i, :, seq_lens[i]-1] = 1
-        # x = x * mask  # (batch_size, hidden_dim, max_seq_len)
-        # x = x.sum(dim=2)  # (batch_size, hidden_dim) <--- used when there is no attention layer
+        #x = x * mask  # (batch_size, hidden_dim, max_seq_len)
+        #x = x.sum(dim=2)  # (batch_size, hidden_dim) <--- used when there is no attention layer
         x, attn_weights = self.attention(x, seq_lens)
         x = self.fc1(x)
         x = self.fc2(x)
-        return self.get_score(x), attn_weights
+        return self.get_score(x), None
+        #return self.get_score(x), attn_weights
 
 
 # TODO: Self-Attention Layer
@@ -184,6 +185,7 @@ class SelfAttention(nn.Module):
         self.attention_w = nn.Parameter(torch.FloatTensor(self.batch_size, self.attn_size, self.lstm_hidden_size))
         nn.init.uniform_(self.attention_w.data, -0.005, 0.005)
         self.softmax = nn.Softmax(dim=-1)
+        self.dropout = nn.Dropout(0.1)
 
     def get_mask(self, x, seq_lens):
         """
@@ -211,5 +213,6 @@ class SelfAttention(nn.Module):
         # scores = self.nonlinear(scores)
         mask = self.get_mask(scores, seq_lens)
         scores = self.masked_softmax(scores, mask)
+        scores = self.dropout(scores)
         weighted_x = torch.matmul(scores, x.permute(0, 2, 1))
         return torch.sum(weighted_x, 1)/self.attn_size, scores.data.numpy()

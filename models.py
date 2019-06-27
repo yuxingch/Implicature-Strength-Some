@@ -173,6 +173,7 @@ class RatingModel(object):
 
                 # real_seq_len = seq_lengths.copy()
                 # seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
+                #output_scores = self.RNet(curr_batch_tensor)
                 pack = pack_padded_sequence(curr_batch_tensor, seq_lengths, batch_first=True)
                 output_scores, _ = self.RNet(pack, len(seq_lengths), seq_lengths)
 
@@ -245,25 +246,25 @@ class RatingModel(object):
             curr_batch = Variable(curr_batch)
             pack = pack_padded_sequence(curr_batch, seq_lengths, batch_first=True)
             # output_scores, h = self.RNet(curr_batch)
-            output_scores, attn_weights = self.RNet(pack, len(seq_lengths), seq_lengths)
+            #output_scores = self.RNet(curr_batch)
+            output_scores, _ = self.RNet(pack, len(seq_lengths), seq_lengths)
+            #output_scores = self.RNet(pack, len(seq_lengths), seq_lengths) 
             output_scores = output_scores.data.tolist()
             temp_rating = [0]*len(sort_idx)
             cnt = 0
-            revert_attn_weights = np.zeros(attn_weights.shape)
+            #revert_attn_weights = np.zeros(attn_weights.shape)
             for s in sort_idx:
                 temp_rating[s] = output_scores[cnt][0]
-                revert_attn_weights[s] = attn_weights[cnt]
+                #revert_attn_weights[s] = attn_weights[cnt]
                 cnt += 1
             temp_rating = temp_rating[diff:]
-            revert_attn_weights = revert_attn_weights[diff:]
-            all_attn[count+diff:iend] = revert_attn_weights
-            # all_hiddens_list.append(h)
+            #revert_attn_weights = revert_attn_weights[diff:]
+            #all_attn[count+diff:iend] = revert_attn_weights
             for curr_score in temp_rating:
                 rating_lst.append(curr_score*max_diff+min_value)
             count += batch_size
-        # all_hiddens = torch.cat(tuple(all_hiddens_list)).data.numpy()
-        #print(len(rating_lst))
-        return np.array(rating_lst), all_attn  # , all_hiddens
+        return np.array(rating_lst)
+        #return np.array(rating_lst), all_attn  # , all_hiddens
 
     def analyze(self):
         """Analyze weights"""
@@ -467,6 +468,7 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM
     raw_tokens.append('<eos>')
     expected_embedding = embedder.embed_sentence(raw_tokens)  # [3, actual_sentence_len+2, 1024]
     if not LSTM:
+        sl = seq_len
         expected_embedding = np.mean(expected_embedding, axis=1)    # averaging on # of words
         if elmo_mode == 'concat':
             expected_embedding = np.concatenate(expected_embedding)
@@ -485,6 +487,7 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM
         else:
             expected_embedding_padded, sl = context_padded(expected_embedding, seq_len)
     expected_embedding_tensor = torch.from_numpy(expected_embedding_padded)
+    #expected_embedding_tensor = torch.from_numpy(expected_embedding)
     return expected_embedding_tensor, sl
 
 
