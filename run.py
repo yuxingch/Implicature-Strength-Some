@@ -340,12 +340,13 @@ def main():
             for epoch in epoch_lst:
                 cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+".pth"
                 r_model_decay = RatingModel(cfg, eval_path)
-                preds_decay, attn_weights = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min, sl)
-                attn_path = eval_path+ '/Attention'
-                mkdir_p(attn_path)
-                new_file_name = attn_path + '/' + cfg.PREDON + '_attn_epoch' + format(epoch) + '.npy'
-                np.save(new_file_name, attn_weights)
-                print(f'Write attention weights to {new_file_name}.')
+                #preds_decay, attn_weights = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min, sl)
+                preds_decay = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min, sl)
+                #attn_path = eval_path+ '/Attention'
+                #mkdir_p(attn_path)
+                #new_file_name = attn_path + '/' + cfg.PREDON + '_attn_epoch' + format(epoch) + '.npy'
+                #np.save(new_file_name, attn_weights)
+                #print(f'Write attention weights to {new_file_name}.')
                 curr_coeff = np.corrcoef(preds_decay, np.array(original_labels))[0, 1]
                 curr_coeff_lst.append(curr_coeff)
                 if max_value < curr_coeff:
