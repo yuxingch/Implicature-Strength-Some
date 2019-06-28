@@ -97,7 +97,7 @@ class RateNet2D(nn.Module):
 
 
 # (Bi-)LSTM model
-class BiLSTMELMo(nn.Module):
+class BiLSTM(nn.Module):
     """
     The purpose of this module is to encode a sequence (sentence/paragraph)
     using a bidirectional LSTM. It feeds the input through LSTM and returns
@@ -106,9 +106,9 @@ class BiLSTMELMo(nn.Module):
     Then, the hidden states will be fed into a fully connected layer to get
     a downward projection, which will be the input of the prediction layer.
     """
-    def __init__(self, elmo_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout, bidirection, batch_size=32):
-        super(BiLSTMELMo, self).__init__()
-        self.elmo_dim = elmo_dim
+    def __init__(self, vec_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout, bidirection, batch_size=32):
+        super(BiLSTM, self).__init__()
+        self.vec_dim = vec_dim
         self.seq_len = seq_len
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
@@ -119,7 +119,7 @@ class BiLSTMELMo(nn.Module):
         self.define_module()
 
     def define_module(self):
-        self.lstm = nn.LSTM(self.elmo_dim,
+        self.lstm = nn.LSTM(self.vec_dim,
                             self.hidden_dim,
                             self.num_layers,
                             batch_first=True,
@@ -167,8 +167,8 @@ class BiLSTMELMo(nn.Module):
         x, attn_weights = self.attention(x, seq_lens)
         x = self.fc1(x)
         x = self.fc2(x)
-        return self.get_score(x), None
-        #return self.get_score(x), attn_weights
+        # return self.get_score(x), None
+        return self.get_score(x), attn_weights
 
 
 # TODO: Self-Attention Layer
