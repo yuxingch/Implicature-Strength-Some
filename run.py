@@ -20,6 +20,7 @@ import yaml
 
 from models import split_by_whitespace, RatingModel, get_sentence, get_sentence_2d
 from models import get_sentence_elmo
+from models import get_sentence_bert
 from models import parse_paragraph_2, parse_paragraph_3
 from utils import mkdir_p
 
@@ -38,6 +39,7 @@ cfg.SINGLE_SENTENCE = True
 cfg.EXPERIMENT_NAME = ''
 cfg.GLOVE_DIM = 100
 cfg.IS_ELMO = True
+cfg.IS_BERT = False
 cfg.ELMO_MODE = 'concat'
 cfg.SAVE_PREDS = False
 cfg.BATCH_ITEM_NUM = 29
@@ -259,6 +261,11 @@ def main():
             NUMPY_DIR += '/elmo_' + cfg.ELMO_MODE
         NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
         LENGTH_PATH = NUMPY_DIR + "/len_" + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
+    elif cfg.IS_BERT:
+        # currently only allow lstm
+        NUMPY_DIR += '/bert_lstm'
+        NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
+        LENGTH_PATH = NUMPY_DIR + '/len_' + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
     else:
         NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.PREDON + '.npy'
         LENGTH_PATH = NUMPY_DIR + '/len_' + cfg.PREDON + '.npy'
@@ -286,6 +293,8 @@ def main():
                                                 LSTM=cfg.LSTM.FLAG,
                                                 seq_len=cfg.LSTM.SEQ_LEN)
                 sl.append(l)
+            elif cfg.IS_BERT:
+                curr_emb, l = get_sentence_bert(input_text, LSTM=cfg.LSTM.FLAG, max_seq_len=cfg.LSTM.SEQ_LEN)
             else:
                 curr_emb, l = get_sentence(input_text, seq_len=cfg.LSTM.SEQ_LEN)
                 sl.append(l)
@@ -340,13 +349,13 @@ def main():
             for epoch in epoch_lst:
                 cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+".pth"
                 r_model_decay = RatingModel(cfg, eval_path)
-                #preds_decay, attn_weights = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min, sl)
-                preds_decay = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min, sl)
-                #attn_path = eval_path+ '/Attention'
-                #mkdir_p(attn_path)
-                #new_file_name = attn_path + '/' + cfg.PREDON + '_attn_epoch' + format(epoch) + '.npy'
-                #np.save(new_file_name, attn_weights)
-                #print(f'Write attention weights to {new_file_name}.')
+                preds_decay, attn_weights = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min, sl)
+                #preds_decay = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min, sl)
+                attn_path = eval_path+ '/Attention'
+                mkdir_p(attn_path)
+                new_file_name = attn_path + '/' + cfg.PREDON + '_attn_epoch' + format(epoch) + '.npy'
+                np.save(new_file_name, attn_weights)
+                print(f'Write attention weights to {new_file_name}.')
                 curr_coeff = np.corrcoef(preds_decay, np.array(original_labels))[0, 1]
                 curr_coeff_lst.append(curr_coeff)
                 if max_value < curr_coeff:

@@ -9,6 +9,8 @@ import time
 # ELMo
 from allennlp.commands.elmo import ElmoEmbedder
 # from allennlp.modules.elmo import Elmo, batch_to_ids
+# BERT
+from bert_serving.client import BertClient
 from easydict import EasyDict as edict
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
@@ -27,6 +29,7 @@ from utils import mkdir_p, weights_init, save_model
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
+bc = BertClient()
 logging.basicConfig(level=logging.INFO)
 
 OPTION_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
@@ -90,25 +93,30 @@ class RatingModel(object):
 
     def load_network(self):
         """Initialize the network or load from checkpoint"""
-        from net import RateNet, RateNet2D, RateNetELMo, BiLSTMELMo
+        from net import RateNet, RateNet2D, RateNetELMo, BiLSTM
         logging.info('initializing neural net')
         self.RNet = None
         if self.cfg.IS_ELMO:
             if self.cfg.ELMO_MODE == 'concat':
-                elmo_dim = 3072
+                vec_dim = 3072
             else:
-                elmo_dim = 1024
+                vec_dim = 1024
             if self.cfg.LSTM.FLAG:
-                # elmo_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout
-                self.RNet = BiLSTMELMo(elmo_dim, self.cfg.LSTM.SEQ_LEN,
-                                       self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
-                                       self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION)
-            else:
-                self.RNet = RateNetELMo(elmo_dim, self.dropout)
-        else:
-            #self.RNet = RateNet(self.cfg.GLOVE_DIM, self.dropout)
-            self.RNet = BiLSTMELMo(100, self.cfg.LSTM.SEQ_LEN, self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
+                # vec_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout
+                self.RNet = BiLSTM(vec_dim, self.cfg.LSTM.SEQ_LEN,
+                                   self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
                                    self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION)
+            else:
+                self.RNet = RateNetELMo(vec_dim, self.dropout)
+        elif self.cfg.IS_BERT:
+            self.RNet = BiLSTM(768, self.cfg.LSTM.SEQ_LEN,
+                               self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
+                               self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION)
+        else:
+            # self.RNet = RateNet(self.cfg.GLOVE_DIM, self.dropout)
+            self.RNet = BiLSTM(100, self.cfg.LSTM.SEQ_LEN,
+                               self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
+                               self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION)
         self.RNet.apply(weights_init)
 
         # Resume from checkpoint
@@ -247,24 +255,24 @@ class RatingModel(object):
             pack = pack_padded_sequence(curr_batch, seq_lengths, batch_first=True)
             # output_scores, h = self.RNet(curr_batch)
             #output_scores = self.RNet(curr_batch)
-            output_scores, _ = self.RNet(pack, len(seq_lengths), seq_lengths)
+            output_scores, attn_weights = self.RNet(pack, len(seq_lengths), seq_lengths)
             #output_scores = self.RNet(pack, len(seq_lengths), seq_lengths) 
             output_scores = output_scores.data.tolist()
             temp_rating = [0]*len(sort_idx)
             cnt = 0
-            #revert_attn_weights = np.zeros(attn_weights.shape)
+            revert_attn_weights = np.zeros(attn_weights.shape)  # (batch_size, 8, seq_len)
             for s in sort_idx:
                 temp_rating[s] = output_scores[cnt][0]
-                #revert_attn_weights[s] = attn_weights[cnt]
+                revert_attn_weights[s, :, :] = attn_weights[cnt, :, :]
                 cnt += 1
             temp_rating = temp_rating[diff:]
-            #revert_attn_weights = revert_attn_weights[diff:]
-            #all_attn[count+diff:iend] = revert_attn_weights
+            revert_attn_weights = revert_attn_weights[diff:]
+            all_attn[count+diff:iend, :, :] = revert_attn_weights[:, :, :]
             for curr_score in temp_rating:
                 rating_lst.append(curr_score*max_diff+min_value)
             count += batch_size
-        return np.array(rating_lst)
-        #return np.array(rating_lst), all_attn  # , all_hiddens
+        # return np.array(rating_lst)
+        return np.array(rating_lst), all_attn  # , all_hiddens
 
     def analyze(self):
         """Analyze weights"""
@@ -437,9 +445,8 @@ def parse_paragraph_3(p, target_tokens):  # <--- 3
     return next_mean, next_mean_II, next_mean_III
 
 
-# Elmo
-def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM=False, seq_len=None):
-    """Get ELMo vector representation for each sentence"""
+def tokenizer(s, pad_symbol=True):
+    """If `pad_symbol=True`, pad <bos> at the beginning and <eos> at the end"""
     s = s.replace('\'ve', ' \'ve')
     s = s.replace('\'re', ' \'re')
     s = s.replace('\'ll', ' \'ll')
@@ -449,7 +456,10 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM
     s = s.replace('\'s', ' \'s')
     modified_s = re.sub('#', '.', s).strip('.').split('.')
     modified_s = list(filter(None, modified_s))
-    raw_tokens = ['<bos>']
+    if pad_symbol:
+        raw_tokens = ['<bos>']
+    else:
+        raw_tokens = []
     for s in modified_s:
         s = re.sub('speaker[0-9a-z\-\*]*[0-9]', '', s)
         s = re.sub('[^a-zA-Z0-9- \n\.]', '', s)
@@ -465,7 +475,15 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM
         s = s.replace('doeuvres', 'd\'oeuvres')
         s = s.replace('mumblex', 'mumble')
         raw_tokens += split_by_whitespace(s)
-    raw_tokens.append('<eos>')
+    if pad_symbol:
+        raw_tokens.append('<eos>')
+    return raw_tokens
+
+
+# Elmo
+def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM=False, seq_len=None):
+    """Get ELMo vector representation for each sentence"""
+    raw_tokens = tokenizer(s)
     expected_embedding = embedder.embed_sentence(raw_tokens)  # [3, actual_sentence_len+2, 1024]
     if not LSTM:
         sl = seq_len
@@ -489,6 +507,22 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM
     expected_embedding_tensor = torch.from_numpy(expected_embedding_padded)
     #expected_embedding_tensor = torch.from_numpy(expected_embedding)
     return expected_embedding_tensor, sl
+
+
+# BERT
+def get_sentence_bert(s, LSTM=False, max_seq_len=None):
+    # if seq_len is None:
+    #     assert not LSTM
+    # else:
+    #     assert LSTM
+    # TODO: allow both non-LSTM and LSTM
+    # first tokenize the sentence
+    tokens = tokenizer(s, pad_symbol=False)
+    # bc.encode() will return a ndarray
+    bert_output = bc.encode([tokens], is_tokenized=True)[0]  # (1, max_seq_len, 768)
+    bert_output = bert_output.squeeze()  # (max_seq_len, 768)
+    sl = max(len(tokens)+2, max_seq_len)
+    return bert_output, sl
 
 
 def padded(emb, seq_len):
