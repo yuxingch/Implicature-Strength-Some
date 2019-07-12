@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn as nn
 
@@ -126,7 +128,8 @@ class BiLSTM(nn.Module):
                             dropout=self.drop_prob,
                             bidirectional=self.bidirect)
         if self.bidirect:
-            self.attention = SelfAttention(self.batch_size, self.hidden_dim*2, 8)
+            # self.attention = SelfAttention(self.batch_size, self.hidden_dim*2, 8)
+            self.attention = MultiHeadAttention(self.batch_size, self.hidden_dim*2, 8)
             self.fc1 = fc_layer(self.hidden_dim*2, self.hidden_dim, self.dropout[0])
             self.fc2 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[1])
             self.get_score = nn.Sequential(
@@ -157,7 +160,7 @@ class BiLSTM(nn.Module):
             x = x.reshape(batch_size, seq_lens[0], self.hidden_dim*2)
         else:
             x = x.reshape(batch_size, seq_lens[0], self.hidden_dim)
-        x = x.permute(0, 2, 1)
+        # x = x.permute(0, 2, 1)
         #mask = torch.zeros(x.size())
 
         #for i in range(batch_size):
@@ -216,3 +219,56 @@ class SelfAttention(nn.Module):
         scores = self.dropout(scores)
         weighted_x = torch.matmul(scores, x.permute(0, 2, 1))
         return torch.sum(weighted_x, 1)/self.attn_size, scores.data.numpy()
+
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, batch_size, lstm_hidden_size, h):
+        super(MultiHeadAttention, self).__init__()
+        assert lstm_hidden_size % h == 0
+        self.batch_size = batch_size
+        self.num_head = h
+        self.d_m = lstm_hidden_size
+        self.d_k = self.d_m // self.num_head
+        self.batch_first = batch_first
+        self.define_module()
+
+    def define_module(self):
+        self.dropout = nn.Dropout(0.1)
+        self.softmax = nn.Softmax(dim=-1)
+        self.linear = nn.Linear(self.d_m, self.d_m)
+        self.attn = None
+
+    def get_mask(self, x, seq_lens):
+        """
+        Get the mask for each padded entry
+        """
+        max_len = seq_lens[0]
+        mask = torch.ones(x.size()[0], max_len)
+        for idx, curr_l in enumerate(seq_lens):
+            if curr_l < max_len:
+                mask[idx, curr_l:] = 0
+        return mask.unsqueeze(1)
+
+    def attention_func(self, x, mask):
+        assert self.d_k == x.size(-1)
+        mask = mask.unsqueeze(1)
+        scores = torch.matmul(x, x.transpose(-2,-1)) \
+            / math.sqrt(self.d_k)
+        scores = scores.masked_fill(mask==0, -1e9)
+        p_attn = self.softmax(scores)
+        p_attn = self.dropout(p_attn)
+        return torch.matmul(p_attn, x), p_attn
+
+    def forward(self, x, seq_lens):
+        """
+
+        x -- (batch_size, max_seq_len, hidden_dim)
+        self.attn -- (batch_size, num_head, max_seq_len, max_seq_len)
+        """
+        # mask = (x != 0).unsqueeze(-2)
+        mask = self.get_mask(x, seq_lens)
+        x = x.view(self.batch_size, -1, self.num_head, self.d_k).transpose(1, 2)
+        x, self.attn = self.attention_func(x, mask)
+        x = x.transpose(1, 2).contiguous().view(self.batch_size, -1, self.num_head*self.d_k)
+        x = self.linear(x)
+        return torch.sum(x, 1), self.attn

@@ -10,7 +10,7 @@ import time
 from allennlp.commands.elmo import ElmoEmbedder
 # from allennlp.modules.elmo import Elmo, batch_to_ids
 # BERT
-from bert_serving.client import BertClient
+# from bert_serving.client import BertClient
 from easydict import EasyDict as edict
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
@@ -29,7 +29,7 @@ from utils import mkdir_p, weights_init, save_model
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-bc = BertClient()
+# bc = BertClient()
 logging.basicConfig(level=logging.INFO)
 
 OPTION_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
@@ -510,19 +510,19 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM
 
 
 # BERT
-def get_sentence_bert(s, LSTM=False, max_seq_len=None):
-    # if seq_len is None:
-    #     assert not LSTM
-    # else:
-    #     assert LSTM
-    # TODO: allow both non-LSTM and LSTM
-    # first tokenize the sentence
-    tokens = tokenizer(s, pad_symbol=False)
-    # bc.encode() will return a ndarray
-    bert_output = bc.encode([tokens], is_tokenized=True)[0]  # (1, max_seq_len, 768)
-    bert_output = bert_output.squeeze()  # (max_seq_len, 768)
-    sl = max(len(tokens)+2, max_seq_len)
-    return bert_output, sl
+# def get_sentence_bert(s, LSTM=False, max_seq_len=None):
+#     # if seq_len is None:
+#     #     assert not LSTM
+#     # else:
+#     #     assert LSTM
+#     # TODO: allow both non-LSTM and LSTM
+#     # first tokenize the sentence
+#     tokens = tokenizer(s, pad_symbol=False)
+#     # bc.encode() will return a ndarray
+#     bert_output = bc.encode([tokens], is_tokenized=True)[0]  # (1, max_seq_len, 768)
+#     bert_output = bert_output.squeeze()  # (max_seq_len, 768)
+#     sl = max(len(tokens)+2, max_seq_len)
+#     return bert_output, sl
 
 
 def padded(emb, seq_len):
