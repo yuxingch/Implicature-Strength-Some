@@ -229,7 +229,6 @@ class MultiHeadAttention(nn.Module):
         self.num_head = h
         self.d_m = lstm_hidden_size
         self.d_k = self.d_m // self.num_head
-        self.batch_first = batch_first
         self.define_module()
 
     def define_module(self):
