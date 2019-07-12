@@ -20,7 +20,7 @@ import yaml
 
 from models import split_by_whitespace, RatingModel, get_sentence, get_sentence_2d
 from models import get_sentence_elmo
-from models import get_sentence_bert
+#from models import get_sentence_bert
 from models import parse_paragraph_2, parse_paragraph_3
 from utils import mkdir_p
 
