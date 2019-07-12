@@ -270,4 +270,4 @@ class MultiHeadAttention(nn.Module):
         x, self.attn = self.attention_func(x, mask)
         x = x.transpose(1, 2).contiguous().view(self.batch_size, -1, self.num_head*self.d_k)
         x = self.linear(x)
-        return torch.sum(x, 1), self.attn
+        return torch.sum(x, 1), self.attn.data.numpy()
