@@ -44,6 +44,8 @@ cfg.ELMO_MODE = 'concat'
 cfg.SAVE_PREDS = False
 cfg.BATCH_ITEM_NUM = 29
 cfg.PREDON = 'eval'
+cfg.CUDA = False
+cfg.GPU_NUM = 1
 
 cfg.LSTM = edict()
 cfg.LSTM.FLAG = False
@@ -161,6 +163,12 @@ def main():
         if not opt.mode == 'train':
             cfg.TRAIN.FLAG = False
             cfg.MODE = opt.mode
+
+    # random seed
+    random.seed(cfg.SEED)
+    torch.manual_seed(cfg.SEED)
+    if opt.CUDA:
+        torch.cuda.manual_seed_all(cfg.SEED)
 
     # print('Using configurations:')
     # pprint.pprint(cfg)

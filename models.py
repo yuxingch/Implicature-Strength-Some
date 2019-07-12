@@ -18,6 +18,7 @@ import numpy as np
 import tensorflow as tf
 import torch
 from torch.autograd import Variable
+import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.optim as optim
 import torchtext.vocab as vocab
@@ -90,6 +91,16 @@ class RatingModel(object):
         self.dropout = [self.cfg.TRAIN.DROPOUT.FC_1, self.cfg.TRAIN.DROPOUT.FC_2]
         self.drop_prob = self.cfg.LSTM.DROP_PROB
         self.interval = self.cfg.TRAIN.INTERVAL
+        self.loss_func = nn.MSELoss()
+
+        # gpu
+        self.gpus = []
+        for i in range(self.cfg.GPU_NUM):
+            self.gpus.append(i)
+        if self.cfg.CUDA:
+            torch.cuda.set_device(self.gpus[0])
+            cudnn.benchmark = True
+            self.loss_func.cuda()
 
     def load_network(self):
         """Initialize the network or load from checkpoint"""
@@ -140,6 +151,9 @@ class RatingModel(object):
         """
         labels = np.expand_dims(labels, axis=1)
         self.load_network()
+        # gpu
+        if self.cfg.CUDA:
+            self.RNet.cuda()
         lr = self.lr
         optimizer = optim.Adam(self.RNet.parameters(),
                                lr=lr,
@@ -176,8 +190,14 @@ class RatingModel(object):
                 curr_batch = curr_batch[:, :seq_lengths[0], :]
                 real_labels = real_labels[sort_idx]
 
-                curr_batch_tensor = Variable(curr_batch, requires_grad=True)
-                real_label_tensor = Variable(torch.from_numpy(real_labels))
+                if self.cfg.CUDA:
+                    curr_batch = torch.from_numpy(curr_batch).float().cuda()
+                    real_labels = torch.from_numpy(real_labels).float().cuda()
+                    curr_batch_tensor = Variable(curr_batch, requires_grad=True)
+                    real_label_tensor = Variable(real_labels)
+                else:
+                    curr_batch_tensor = Variable(curr_batch, requires_grad=True)
+                    real_label_tensor = Variable(torch.from_numpy(real_labels))
 
                 # real_seq_len = seq_lengths.copy()
                 # seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
@@ -186,8 +206,7 @@ class RatingModel(object):
                 output_scores, _ = self.RNet(pack, len(seq_lengths), seq_lengths)
 
                 optimizer.zero_grad()
-                loss_func = nn.MSELoss()
-                loss = loss_func(output_scores, real_label_tensor.type(torch.FloatTensor))
+                loss = self.loss_func(output_scores, real_label_tensor.type(torch.FloatTensor))
                 total_loss += loss.item()
                 loss.backward()
 
@@ -228,13 +247,17 @@ class RatingModel(object):
         self.load_network()
         self.RNet.eval()
 
+        # gpu
+        if self.cfg.CUDA:
+            self.RNet.cuda()
+
         num_items = word_embs.shape[0]
         batch_size = min(num_items, self.batch_size)
 
         rating_lst = []
         count = 0
         all_hiddens_list = []
-        all_attn = np.zeros((408, 8, self.cfg.LSTM.SEQ_LEN))
+        all_attn = np.zeros((408, 8, self.cfg.LSTM.SEQ_LEN, self.cfg.LSTM.SEQ_LEN))
         diff = 0
         while count < num_items:
             iend = count + batch_size
@@ -251,6 +274,8 @@ class RatingModel(object):
             seq_lengths.sort(reverse=True)
             curr_batch = curr_batch[sort_idx]
             curr_batch = curr_batch[:, :seq_lengths[0], :]
+            if self.cfg.CUDA:
+                curr_batch = torch.from_numpy(curr_batch).float().cuda()
             curr_batch = Variable(curr_batch)
             pack = pack_padded_sequence(curr_batch, seq_lengths, batch_first=True)
             # output_scores, h = self.RNet(curr_batch)
@@ -260,14 +285,14 @@ class RatingModel(object):
             output_scores = output_scores.data.tolist()
             temp_rating = [0]*len(sort_idx)
             cnt = 0
-            revert_attn_weights = np.zeros(attn_weights.shape)  # (batch_size, 8, seq_len)
+            revert_attn_weights = np.zeros(attn_weights.shape)  # (batch_size, 8, seq_len, seq_len)
             for s in sort_idx:
                 temp_rating[s] = output_scores[cnt][0]
-                revert_attn_weights[s, :, :] = attn_weights[cnt, :, :]
+                revert_attn_weights[s, :, :, :] = attn_weights[cnt, :, :, :]
                 cnt += 1
             temp_rating = temp_rating[diff:]
             revert_attn_weights = revert_attn_weights[diff:]
-            all_attn[count+diff:iend, :, :] = revert_attn_weights[:, :, :]
+            all_attn[count+diff:iend, :, :, :] = revert_attn_weights[:, :, :, :]
             for curr_score in temp_rating:
                 rating_lst.append(curr_score*max_diff+min_value)
             count += batch_size
