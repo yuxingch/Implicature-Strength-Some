@@ -22,11 +22,12 @@ class RateNet(nn.Module):
         self.define_module()
 
     def define_module(self):
-        self.fc1 = fc_layer(self.input_dim, 64, self.dropout[0])
-        self.fc2 = fc_layer(64, 32, self.dropout[1])
-
+        #self.fc1 = fc_layer(self.input_dim, 64, self.dropout[0])
+        #self.fc2 = fc_layer(64, 32, self.dropout[1])
+        self.fc1 = fc_layer(self.input_dim, self.input_dim//2, self.dropout[0])
+        self.fc2 = fc_layer(self.input_dim//2, self.input_dim//4, self.dropout[1])
         self.get_score = nn.Sequential(
-            nn.Linear(32, 1, bias=True))
+            nn.Linear(self.input_dim//4, 1, bias=True))
 
     def forward(self, word_embs):
         h1 = self.fc1(word_embs)
@@ -108,7 +109,7 @@ class BiLSTM(nn.Module):
     Then, the hidden states will be fed into a fully connected layer to get
     a downward projection, which will be the input of the prediction layer.
     """
-    def __init__(self, vec_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout, bidirection, batch_size=32):
+    def __init__(self, vec_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout, bidirection, is_gpu, batch_size=32):
         super(BiLSTM, self).__init__()
         self.vec_dim = vec_dim
         self.seq_len = seq_len
@@ -118,6 +119,7 @@ class BiLSTM(nn.Module):
         self.dropout = dropout
         self.bidirect = bidirection
         self.batch_size = batch_size
+        self.is_gpu = is_gpu
         self.define_module()
 
     def define_module(self):
@@ -129,7 +131,7 @@ class BiLSTM(nn.Module):
                             bidirectional=self.bidirect)
         if self.bidirect:
             # self.attention = SelfAttention(self.batch_size, self.hidden_dim*2, 8)
-            self.attention = MultiHeadAttention(self.batch_size, self.hidden_dim*2, 8)
+            self.attention = MultiHeadAttention(self.batch_size, self.hidden_dim*2, 8, self.is_gpu)
             self.fc1 = fc_layer(self.hidden_dim*2, self.hidden_dim, self.dropout[0])
             self.fc2 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[1])
             self.get_score = nn.Sequential(
@@ -154,23 +156,28 @@ class BiLSTM(nn.Module):
         else:
             h0 = torch.randn(self.num_layers, batch_size, self.hidden_dim)
             c0 = torch.randn(self.num_layers, batch_size, self.hidden_dim)
+        if self.is_gpu:
+            h0 = h0.cuda()
+            c0 = c0.cuda()
         x, _ = self.lstm(x, (h0, c0))
         x, _ = nn.utils.rnn.pad_packed_sequence(x, batch_first=True)
         if self.bidirect:
             x = x.reshape(batch_size, seq_lens[0], self.hidden_dim*2)
         else:
             x = x.reshape(batch_size, seq_lens[0], self.hidden_dim)
-        # x = x.permute(0, 2, 1)
+        #x = x.permute(0, 2, 1)
         #mask = torch.zeros(x.size())
 
         #for i in range(batch_size):
         #    mask[i, :, seq_lens[i]-1] = 1
+        #if self.is_gpu:
+        #    mask = mask.cuda()
         #x = x * mask  # (batch_size, hidden_dim, max_seq_len)
         #x = x.sum(dim=2)  # (batch_size, hidden_dim) <--- used when there is no attention layer
         x, attn_weights = self.attention(x, seq_lens)
         x = self.fc1(x)
         x = self.fc2(x)
-        # return self.get_score(x), None
+        #return self.get_score(x)
         return self.get_score(x), attn_weights
 
 
@@ -222,11 +229,12 @@ class SelfAttention(nn.Module):
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, batch_size, lstm_hidden_size, h):
+    def __init__(self, batch_size, lstm_hidden_size, h, is_gpu=False):
         super(MultiHeadAttention, self).__init__()
         assert lstm_hidden_size % h == 0
         self.batch_size = batch_size
         self.num_head = h
+        self.is_gpu = is_gpu
         self.d_m = lstm_hidden_size
         self.d_k = self.d_m // self.num_head
         self.define_module()
@@ -243,6 +251,8 @@ class MultiHeadAttention(nn.Module):
         """
         max_len = seq_lens[0]
         mask = torch.ones(x.size()[0], max_len)
+        if self.is_gpu:
+            mask = mask.cuda()
         for idx, curr_l in enumerate(seq_lens):
             if curr_l < max_len:
                 mask[idx, curr_l:] = 0
@@ -270,4 +280,6 @@ class MultiHeadAttention(nn.Module):
         x, self.attn = self.attention_func(x, mask)
         x = x.transpose(1, 2).contiguous().view(self.batch_size, -1, self.num_head*self.d_k)
         x = self.linear(x)
+        if self.is_gpu:
+            self.attn = self.attn.cpu()
         return torch.sum(x, 1), self.attn.data.numpy()

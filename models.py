@@ -10,7 +10,7 @@ import time
 from allennlp.commands.elmo import ElmoEmbedder
 # from allennlp.modules.elmo import Elmo, batch_to_ids
 # BERT
-# from bert_serving.client import BertClient
+from bert_serving.client import BertClient
 from easydict import EasyDict as edict
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
@@ -30,7 +30,7 @@ from utils import mkdir_p, weights_init, save_model
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-# bc = BertClient()
+bc = BertClient()
 logging.basicConfig(level=logging.INFO)
 
 OPTION_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
@@ -116,18 +116,21 @@ class RatingModel(object):
                 # vec_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout
                 self.RNet = BiLSTM(vec_dim, self.cfg.LSTM.SEQ_LEN,
                                    self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
-                                   self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION)
+                                   self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION, self.cfg.CUDA)
             else:
                 self.RNet = RateNetELMo(vec_dim, self.dropout)
         elif self.cfg.IS_BERT:
             self.RNet = BiLSTM(768, self.cfg.LSTM.SEQ_LEN,
                                self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
-                               self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION)
+                               self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION, self.cfg.CUDA)
+            '''
+            self.RNet = RateNet(768, self.dropout)
+            '''
         else:
             # self.RNet = RateNet(self.cfg.GLOVE_DIM, self.dropout)
             self.RNet = BiLSTM(100, self.cfg.LSTM.SEQ_LEN,
                                self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
-                               self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION)
+                               self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION, self.cfg.CUDA)
         self.RNet.apply(weights_init)
 
         # Resume from checkpoint
@@ -191,7 +194,7 @@ class RatingModel(object):
                 real_labels = real_labels[sort_idx]
 
                 if self.cfg.CUDA:
-                    curr_batch = torch.from_numpy(curr_batch).float().cuda()
+                    curr_batch = curr_batch.cuda()
                     real_labels = torch.from_numpy(real_labels).float().cuda()
                     curr_batch_tensor = Variable(curr_batch, requires_grad=True)
                     real_label_tensor = Variable(real_labels)
@@ -202,11 +205,12 @@ class RatingModel(object):
                 # real_seq_len = seq_lengths.copy()
                 # seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
                 #output_scores = self.RNet(curr_batch_tensor)
+
                 pack = pack_padded_sequence(curr_batch_tensor, seq_lengths, batch_first=True)
                 output_scores, _ = self.RNet(pack, len(seq_lengths), seq_lengths)
-
+                #output_scores = self.RNet(pack, len(seq_lengths), seq_lengths) 
                 optimizer.zero_grad()
-                loss = self.loss_func(output_scores, real_label_tensor.type(torch.FloatTensor))
+                loss = self.loss_func(output_scores, real_label_tensor)
                 total_loss += loss.item()
                 loss.backward()
 
@@ -270,34 +274,39 @@ class RatingModel(object):
             # curr_batch = Variable(word_embs[count:iend])
             curr_batch = word_embs[count:iend]
             seq_lengths = sl[count:iend]
+            #sort_idx = list(range(batch_size))
             sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
             seq_lengths.sort(reverse=True)
             curr_batch = curr_batch[sort_idx]
             curr_batch = curr_batch[:, :seq_lengths[0], :]
             if self.cfg.CUDA:
-                curr_batch = torch.from_numpy(curr_batch).float().cuda()
+                curr_batch = curr_batch.cuda()
             curr_batch = Variable(curr_batch)
+
             pack = pack_padded_sequence(curr_batch, seq_lengths, batch_first=True)
+
             # output_scores, h = self.RNet(curr_batch)
             #output_scores = self.RNet(curr_batch)
+
             output_scores, attn_weights = self.RNet(pack, len(seq_lengths), seq_lengths)
+
             #output_scores = self.RNet(pack, len(seq_lengths), seq_lengths) 
             output_scores = output_scores.data.tolist()
             temp_rating = [0]*len(sort_idx)
             cnt = 0
-            revert_attn_weights = np.zeros(attn_weights.shape)  # (batch_size, 8, seq_len, seq_len)
+            #revert_attn_weights = np.zeros(attn_weights.shape)  # (batch_size, 8, seq_len, seq_len)
             for s in sort_idx:
                 temp_rating[s] = output_scores[cnt][0]
-                revert_attn_weights[s, :, :, :] = attn_weights[cnt, :, :, :]
+                #revert_attn_weights[s, :, :, :] = attn_weights[cnt, :, :, :]
                 cnt += 1
             temp_rating = temp_rating[diff:]
-            revert_attn_weights = revert_attn_weights[diff:]
-            all_attn[count+diff:iend, :, :, :] = revert_attn_weights[:, :, :, :]
+            #revert_attn_weights = revert_attn_weights[diff:]
+            #all_attn[count+diff:iend, :, :, :] = revert_attn_weights[:, :, :, :]
             for curr_score in temp_rating:
                 rating_lst.append(curr_score*max_diff+min_value)
             count += batch_size
-        # return np.array(rating_lst)
-        return np.array(rating_lst), all_attn  # , all_hiddens
+        return np.array(rating_lst)
+        #return np.array(rating_lst), all_attn  # , all_hiddens
 
     def analyze(self):
         """Analyze weights"""
@@ -470,7 +479,7 @@ def parse_paragraph_3(p, target_tokens):  # <--- 3
     return next_mean, next_mean_II, next_mean_III
 
 
-def tokenizer(s, pad_symbol=True):
+def tokenizer(s, pad_symbol=True, seq_len=None, from_right=True):
     """If `pad_symbol=True`, pad <bos> at the beginning and <eos> at the end"""
     s = s.replace('\'ve', ' \'ve')
     s = s.replace('\'re', ' \'re')
@@ -502,6 +511,14 @@ def tokenizer(s, pad_symbol=True):
         raw_tokens += split_by_whitespace(s)
     if pad_symbol:
         raw_tokens.append('<eos>')
+    total_len = len(raw_tokens)
+    if seq_len and seq_len-2 < total_len:
+        seq_len -= 2
+        if from_right:
+            return raw_tokens[:seq_len]
+        else:
+            total_len = len(raw_tokens)
+            return raw_tokens[total_len-seq_len:]
     return raw_tokens
 
 
@@ -535,19 +552,22 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM
 
 
 # BERT
-# def get_sentence_bert(s, LSTM=False, max_seq_len=None):
-#     # if seq_len is None:
-#     #     assert not LSTM
-#     # else:
-#     #     assert LSTM
-#     # TODO: allow both non-LSTM and LSTM
-#     # first tokenize the sentence
-#     tokens = tokenizer(s, pad_symbol=False)
-#     # bc.encode() will return a ndarray
-#     bert_output = bc.encode([tokens], is_tokenized=True)[0]  # (1, max_seq_len, 768)
-#     bert_output = bert_output.squeeze()  # (max_seq_len, 768)
-#     sl = max(len(tokens)+2, max_seq_len)
-#     return bert_output, sl
+def get_sentence_bert(s, LSTM=False, max_seq_len=None, is_single=True):
+    # if seq_len is None:
+    #     assert not LSTM
+    # else:
+    #     assert LSTM
+    # TODO: allow both non-LSTM and LSTM
+    # first tokenize the sentence
+    tokens = tokenizer(s, pad_symbol=False, seq_len=max_seq_len, from_right=is_single)
+    # bc.encode() will return a ndarray
+    #print(len(tokens))
+    bert_output = bc.encode([tokens], is_tokenized=True)[0]  # (1, max_seq_len, 768)
+    #print(bert_output.shape)
+    bert_output = bert_output.squeeze()  # (max_seq_len, 768)
+    sl = len(tokens)+2
+    #print(bert_output.shape)
+    return torch.from_numpy(bert_output), sl
 
 
 def padded(emb, seq_len):
