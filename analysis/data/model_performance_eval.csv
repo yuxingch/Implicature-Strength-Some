@@ -1,0 +1,204 @@
+full_model,word_embedding,context,lstm,attention,epoch,r
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,0,0.007261606204
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,1,0.06844103821
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,5,-0.04016327796
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,10,0.2689052469
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,15,0.5185080379
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,20,0.5209782683
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,25,0.5840652513
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,30,0.6181452911
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,35,0.6323431591
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,40,0.6232817941
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,45,0.6335049924
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,50,0.6380143086
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,55,0.6437845024
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,60,0.6417488651
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,65,0.6514638875
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,70,0.6513717935
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,75,0.6485751816
+ELMo+Single+LSTM,ELMo,Single,LSTM,No attention,80,0.6431472227
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,0,0.007261606204
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,1,0.02456334075
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,5,-0.00839465824
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,10,0.009018546328
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,15,-0.03570993506
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,20,0.3318125771
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,25,0.4687266501
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,30,0.629867314
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,35,0.6413290653
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,40,0.6357817914
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,45,0.6556564996
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,50,0.6853420484
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,55,0.6662485921
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,60,0.6955700636
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,65,0.7005462614
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,70,0.6843153895
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,75,0.6777553207
+ELMo+Contextual+LSTM,ELMo,Contextual,LSTM,No attention,80,0.6833567162
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,0,-0.1370097108
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,1,0.1601523487
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,5,0.5899944683
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,10,0.6145560843
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,15,0.6775275478
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,20,0.6722374172
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,25,0.6723485788
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,30,0.6900195255
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,35,0.6572297161
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,40,0.6387777202
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,45,0.6560753261
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,50,0.6731596754
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,55,0.6676622576
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,60,0.6736046075
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,65,0.6647793591
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,70,0.6631017285
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,75,0.6723799802
+ELMo+Single+LSTM+Attention,ELMo,Single,LSTM,Attention,80,0.6920327404
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,0,-0.1300525214
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,1,0.281835066
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,5,0.6439448513
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,10,0.6005848735
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,15,0.6138767716
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,20,0.6526203285
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,25,0.6727225007
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,30,0.668424114
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,35,0.6878011336
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,40,0.6849929141
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,45,0.687712742
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,50,0.6906781147
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,55,0.6901906247
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,60,0.6930830398
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,65,0.6856037593
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,70,0.6973960593
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,75,0.6906386309
+ELMo+Contextual+LSTM+Attention,ELMo,Contextual,LSTM,Attention,80,0.6937490575
+ELMo+Single,ELMo,Single,not LSTM,No attention,0,-0.1338387321
+ELMo+Single,ELMo,Single,not LSTM,No attention,1,0.1855784118
+ELMo+Single,ELMo,Single,not LSTM,No attention,20,0.3127762004
+ELMo+Single,ELMo,Single,not LSTM,No attention,40,0.3855238418
+ELMo+Single,ELMo,Single,not LSTM,No attention,60,0.4518889333
+ELMo+Single,ELMo,Single,not LSTM,No attention,80,0.5172752253
+ELMo+Single,ELMo,Single,not LSTM,No attention,100,0.5734194044
+ELMo+Single,ELMo,Single,not LSTM,No attention,120,0.5772948867
+ELMo+Single,ELMo,Single,not LSTM,No attention,140,0.6013535066
+ELMo+Single,ELMo,Single,not LSTM,No attention,160,0.6225990629
+ELMo+Single,ELMo,Single,not LSTM,No attention,180,0.6440290403
+ELMo+Single,ELMo,Single,not LSTM,No attention,200,0.6497364
+ELMo+Single,ELMo,Single,not LSTM,No attention,220,0.651984013
+ELMo+Single,ELMo,Single,not LSTM,No attention,240,0.6554389253
+ELMo+Single,ELMo,Single,not LSTM,No attention,260,0.6628979763
+ELMo+Single,ELMo,Single,not LSTM,No attention,280,0.6638831729
+ELMo+Single,ELMo,Single,not LSTM,No attention,300,0.6619941483
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,0,0.08514704301
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,1,0.2254729947
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,5,0.5585785105
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,10,0.519473286
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,15,0.6078891742
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,20,0.5883867483
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,25,0.6127616065
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,30,0.6145510664
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,35,0.5993151983
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,40,0.6200679634
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,45,0.5833516241
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,50,0.6164986211
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,55,0.6143231072
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,60,0.602776802
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,65,0.5915952802
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,70,0.6165149493
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,75,0.6289672435
+ELMo+Contextual,ELMo,Contextual,not LSTM,No attention,80,0.6109965736
+GloVe+Single,GloVe,Single,not LSTM,No attention,0,-0.1707310449
+GloVe+Single,GloVe,Single,not LSTM,No attention,1,0.249284348
+GloVe+Single,GloVe,Single,not LSTM,No attention,20,0.4570430647
+GloVe+Single,GloVe,Single,not LSTM,No attention,40,0.5012699289
+GloVe+Single,GloVe,Single,not LSTM,No attention,60,0.5110480777
+GloVe+Single,GloVe,Single,not LSTM,No attention,80,0.472637215
+GloVe+Single,GloVe,Single,not LSTM,No attention,100,0.4720981346
+GloVe+Single,GloVe,Single,not LSTM,No attention,120,0.5005008887
+GloVe+Single,GloVe,Single,not LSTM,No attention,140,0.5303414038
+GloVe+Single,GloVe,Single,not LSTM,No attention,160,0.5336183813
+GloVe+Single,GloVe,Single,not LSTM,No attention,180,0.5273215299
+GloVe+Single,GloVe,Single,not LSTM,No attention,200,0.5250451207
+GloVe+Contextual,GloVe,Contextual,not LSTM,No attention,0,-0.08941821325
+GloVe+Contextual,GloVe,Contextual,not LSTM,No attention,1,0.1137513903
+GloVe+Contextual,GloVe,Contextual,not LSTM,No attention,20,0.2040446617
+GloVe+Contextual,GloVe,Contextual,not LSTM,No attention,40,0.1912010896
+GloVe+Contextual,GloVe,Contextual,not LSTM,No attention,60,0.1740815655
+GloVe+Contextual,GloVe,Contextual,not LSTM,No attention,80,0.1599778681
+GloVe+Contextual,GloVe,Contextual,not LSTM,No attention,100,0.1958267267
+GloVe+Contextual,GloVe,Contextual,not LSTM,No attention,120,0.1750855017
+GloVe+Contextual,GloVe,Contextual,not LSTM,No attention,140,0.1495517693
+GloVe+Contextual,GloVe,Contextual,not LSTM,No attention,160,0.1504115529
+GloVe+Contextual,GloVe,Contextual,not LSTM,No attention,180,0.1564448656
+GloVe+Contextual,GloVe,Contextual,not LSTM,No attention,200,0.1579263223
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,0,-0.02948663337
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,1,-0.005124778243
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,5,0.3763880276
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,10,0.6363537141
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,15,0.6739539342
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,20,0.6465998856
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,25,0.648884485
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,30,0.6622709281
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,35,0.6547472918
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,40,0.6211926596
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,45,0.635511772
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,50,0.6337641728
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,55,0.6316298692
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,60,0.6370572323
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,65,0.6366973125
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,70,0.6333502704
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,75,0.6229904767
+GloVe+Single+LSTM,GloVe,Single,LSTM,No attention,80,0.6292801731
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,0,-0.07458312365
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,1,0.0533753242
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,5,0.02106091558
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,10,0.1572353508
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,15,0.5201014717
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,20,0.5938284199
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,25,0.6306880647
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,30,0.59700902
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,35,0.5925678575
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,40,0.5920677361
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,45,0.5730537364
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,50,0.572111941
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,55,0.5664537262
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,60,0.5727182205
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,65,0.5671285593
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,70,0.5708778224
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,75,0.5643343609
+GloVe+Contextual+LSTM,GloVe,Contextual,LSTM,No attention,80,0.5558168782
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,0,0.0324568713
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,1,0.172375033
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,5,0.5009213362
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,10,0.6103854925
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,15,0.6056036062
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,20,0.6541569122
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,25,0.620633502
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,30,0.6328766946
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,35,0.6058934713
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,40,0.5987341819
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,45,0.5906210005
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,50,0.6010047349
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,55,0.605478287
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,60,0.6029710471
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,65,0.6023511508
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,70,0.6000747943
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,75,0.606222235
+GloVe+Single+LSTM+Attention,GloVe,Single,LSTM,Attention,80,0.6017275162
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,0,0.01226879615
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,1,0.002841103488
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,5,0.4351483277
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,10,0.4551712466
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,15,0.5095651165
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,20,0.6030960887
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,25,0.5813484676
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,30,0.5659349733
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,35,0.5763518344
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,40,0.5855291778
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,45,0.5676924107
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,50,0.5675464685
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,55,0.5653576915
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,60,0.5693724174
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,65,0.5673817999
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,70,0.5606741307
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,75,0.5660449538
+GloVe+Contextual+LSTM+Attention,GloVe,Contextual,LSTM,Attention,80,0.5691150447

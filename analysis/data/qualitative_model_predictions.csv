@@ -1,0 +1,17 @@
+Sentence,Avg Prediction (ELMo+Single+LSTM+Attn),Partitive,Modification (A),Modification (P),Subjecthood
+Some cats were chasing the mouse.,5.525943935,FALSE,FALSE,FALSE,TRUE
+Some of the cats were chasing the mouse.,6.973603845,TRUE,FALSE,FALSE,TRUE
+Some cats in the backyard were chasing the mouse.,5.961904466,FALSE,FALSE,TRUE,TRUE
+Some black cats were chasing the mouse.,4.493804157,FALSE,TRUE,FALSE,TRUE
+The mouse was being chased by some cats.,3.322674811,FALSE,FALSE,FALSE,FALSE
+Some of the cats in the backyard were chasing the mouse.,4.342687249,TRUE,FALSE,TRUE,TRUE
+The mouse was being chased by some of the cats in the backyard.,5.944297552,TRUE,FALSE,TRUE,FALSE
+The mouse was being chased by some of the cats.,6.307440758,TRUE,FALSE,FALSE,FALSE
+Some black cats in the backyard were chasing the mouse.,5.34131515,FALSE,TRUE,TRUE,TRUE
+The mouse was being chased by some cats in the backyard. ,2.511463359,FALSE,FALSE,TRUE,FALSE
+The mouse was being chased by some black cats.,4.378816068,FALSE,TRUE,FALSE,FALSE
+The mouse was being chased by some black cats in the backyard.,4.20634073,FALSE,TRUE,TRUE,FALSE
+Some of the black cats in the backyard were chasing the mouse.,6.80410701,TRUE,TRUE,TRUE,TRUE
+The mouse was being chased by some of the black cats in the backyard.,5.685536444,TRUE,TRUE,TRUE,FALSE
+Some of the black cats were chasing the mouse.,6.056676388,TRUE,TRUE,FALSE,TRUE
+The mouse was being chased by some of the black cats.,6.753864408,TRUE,TRUE,FALSE,FALSE
