@@ -20,7 +20,7 @@ import yaml
 
 from models import split_by_whitespace, RatingModel, get_sentence, get_sentence_2d
 from models import get_sentence_elmo
-#from models import get_sentence_bert
+from models import get_sentence_bert
 from models import parse_paragraph_2, parse_paragraph_3
 from utils import mkdir_p
 
@@ -156,8 +156,6 @@ def main():
         cfg.SEED = opt.seed_nm
         cfg.PREDICTION_TYPE = opt.t
         cfg.IS_RANDOM = opt.random_vector
-        if opt.sentence_num != 0:
-            cfg.SINGLE_SENTENCE = False
         cfg.SAVE_PREDS = opt.save_preds
         cfg.EXPERIMENT_NAME = opt.experiment_name
         if not opt.mode == 'train':
@@ -167,7 +165,7 @@ def main():
     # random seed
     random.seed(cfg.SEED)
     torch.manual_seed(cfg.SEED)
-    if opt.CUDA:
+    if cfg.CUDA:
         torch.cuda.manual_seed_all(cfg.SEED)
 
     # print('Using configurations:')
@@ -270,8 +268,8 @@ def main():
         NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
         LENGTH_PATH = NUMPY_DIR + "/len_" + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
     elif cfg.IS_BERT:
-        # currently only allow lstm
-        NUMPY_DIR += '/bert_lstm'
+        # currently only allow non-lstm
+        NUMPY_DIR += '/bert'
         NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
         LENGTH_PATH = NUMPY_DIR + '/len_' + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
     else:
@@ -287,13 +285,14 @@ def main():
     else:
         sl = []
         for (k, v) in tqdm(contents.items(), total=len(contents)):
-            if opt.sentence_num == 0:
+            if cfg.SINGLE_SENTENCE:
                 # only including the target utterance
                 input_text = v[0]
             else:
                 # include the whole dialogue
                 context_v = contexts[k]
                 input_text = context_v[0]
+                #print(input_text)
             if cfg.IS_ELMO:
                 curr_emb, l = get_sentence_elmo(input_text, embedder=embedder,
                                                 elmo_mode=cfg.ELMO_MODE,
@@ -302,7 +301,8 @@ def main():
                                                 seq_len=cfg.LSTM.SEQ_LEN)
                 sl.append(l)
             elif cfg.IS_BERT:
-                curr_emb, l = get_sentence_bert(input_text, LSTM=cfg.LSTM.FLAG, max_seq_len=cfg.LSTM.SEQ_LEN)
+                curr_emb, l = get_sentence_bert(input_text, LSTM=cfg.LSTM.FLAG, max_seq_len=cfg.LSTM.SEQ_LEN, is_single=cfg.SINGLE_SENTENCE)
+                sl.append(l)
             else:
                 curr_emb, l = get_sentence(input_text, seq_len=cfg.LSTM.SEQ_LEN)
                 sl.append(l)
@@ -357,13 +357,13 @@ def main():
             for epoch in epoch_lst:
                 cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+".pth"
                 r_model_decay = RatingModel(cfg, eval_path)
-                preds_decay, attn_weights = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min, sl)
-                #preds_decay = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min, sl)
-                attn_path = eval_path+ '/Attention'
-                mkdir_p(attn_path)
-                new_file_name = attn_path + '/' + cfg.PREDON + '_attn_epoch' + format(epoch) + '.npy'
-                np.save(new_file_name, attn_weights)
-                print(f'Write attention weights to {new_file_name}.')
+                #preds_decay, attn_weights = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min, sl)
+                preds_decay = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min, sl)
+                #attn_path = eval_path+ '/Attention'
+                #mkdir_p(attn_path)
+                #new_file_name = attn_path + '/' + cfg.PREDON + '_attn_epoch' + format(epoch) + '.npy'
+                #np.save(new_file_name, attn_weights)
+                #print(f'Write attention weights to {new_file_name}.')
                 curr_coeff = np.corrcoef(preds_decay, np.array(original_labels))[0, 1]
                 curr_coeff_lst.append(curr_coeff)
                 if max_value < curr_coeff:
