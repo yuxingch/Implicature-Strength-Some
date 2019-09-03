@@ -38,6 +38,7 @@ OPTION_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
 WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
               "2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
 
+BERT_DIM = 768
 GLOVE_DIM = 100
 glove = vocab.GloVe(name='6B', dim=GLOVE_DIM)
 
@@ -65,20 +66,17 @@ def write_summary(value, tag, summary_writer, global_step):
 
 class RatingModel(object):
 
-    def __init__(self, cfg, output_dir, sn=0):
+    def __init__(self, cfg, output_dir):
         """Intialize RatingModel
 
         Positional arguments:
         cfg -- configuration dictionary
         output_dir -- path to save checkpoints and logs
-
-        Keyword argument:
-        sn -- number of previous sentences taken into consideration (default 0)
         """
         self.cfg = cfg
         if self.cfg.TRAIN.FLAG:
-            self.model_dir = os.path.join(output_dir, 'Model_' + str(sn) + 'S')
-            self.log_dir = os.path.join(output_dir, 'Log_' + str(sn) + 'S')
+            self.model_dir = os.path.join(output_dir, 'Model')
+            self.log_dir = os.path.join(output_dir, 'Log')
             mkdir_p(self.model_dir)
             mkdir_p(self.log_dir)
             self.summary_writer = tf.summary.FileWriter(self.log_dir)
@@ -104,33 +102,34 @@ class RatingModel(object):
 
     def load_network(self):
         """Initialize the network or load from checkpoint"""
-        from net import RateNet, RateNet2D, RateNetELMo, BiLSTM
+        from net import RateNet, RateNet2D, BiLSTM, BiLSTMAttn
         logging.info('initializing neural net')
+
         self.RNet = None
+        vec_dim = GLOVE_DIM
         if self.cfg.IS_ELMO:
             if self.cfg.ELMO_MODE == 'concat':
                 vec_dim = 3072
             else:
                 vec_dim = 1024
-            if self.cfg.LSTM.FLAG:
-                # vec_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout
-                self.RNet = BiLSTM(vec_dim, self.cfg.LSTM.SEQ_LEN,
-                                   self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
-                                   self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION, self.cfg.CUDA)
-            else:
-                self.RNet = RateNetELMo(vec_dim, self.dropout)
         elif self.cfg.IS_BERT:
-            self.RNet = BiLSTM(768, self.cfg.LSTM.SEQ_LEN,
-                               self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
-                               self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION, self.cfg.CUDA)
-            '''
-            self.RNet = RateNet(768, self.dropout)
-            '''
+            vec_dim = BERT_DIM
+        if self.cfg.LSTM.FLAG:
+            if self.cfg.ATTN:
+                self.RNet = BiLSTMAttn(vec_dim, self.cfg.LSTM.SEQ_LEN,
+                                       self.cfg.LSTM.HIDDEN_DIM,
+                                       self.cfg.LSTM.LAYERS,
+                                       self.drop_prob, self.dropout,
+                                       self.cfg.LSTM.BIDIRECTION,
+                                       self.cfg.CUDA)
+            else:
+                self.RNet = BiLSTM(vec_dim, self.cfg.LSTM.SEQ_LEN,
+                                   self.cfg.LSTM.HIDDEN_DIM,
+                                   self.cfg.LSTM.LAYERS,
+                                   self.drop_prob, self.dropout,
+                                   self.cfg.LSTM.BIDIRECTION, self.cfg.CUDA)
         else:
-            # self.RNet = RateNet(self.cfg.GLOVE_DIM, self.dropout)
-            self.RNet = BiLSTM(100, self.cfg.LSTM.SEQ_LEN,
-                               self.cfg.LSTM.HIDDEN_DIM, self.cfg.LSTM.LAYERS,
-                               self.drop_prob, self.dropout, self.cfg.LSTM.BIDIRECTION, self.cfg.CUDA)
+            self.RNet = RateNet(vec_dim, self.dropout)
         self.RNet.apply(weights_init)
 
         # Resume from checkpoint
@@ -143,14 +142,7 @@ class RatingModel(object):
 
         Positional arguments:
         word_embs -- vector representations for all examples
-                        if elmo_concat:
-                            if not lstm: (954, 3072)
-                            if lstm: (954, 30, 3072)
-                        if elmo_avg:
-                            if not lstm: (954, 1024)
-                            if lstm: (954, 30, 1024)
-                        if GloVe: (954, GLOVE_DIM)
-        labels -- ground truth (954, )
+        labels -- ground truth
         """
         labels = np.expand_dims(labels, axis=1)
         self.load_network()
@@ -187,10 +179,10 @@ class RatingModel(object):
                 real_labels = labels[inds]
                 curr_batch = word_embs[inds]
                 seq_lengths = [s_len[ii] for ii in inds]
+
                 sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
                 seq_lengths.sort(reverse=True)
                 curr_batch = curr_batch[sort_idx]
-                curr_batch = curr_batch[:, :seq_lengths[0], :]
                 real_labels = real_labels[sort_idx]
 
                 if self.cfg.CUDA:
@@ -204,17 +196,19 @@ class RatingModel(object):
 
                 # real_seq_len = seq_lengths.copy()
                 # seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
-                #output_scores = self.RNet(curr_batch_tensor)
-
-                pack = pack_padded_sequence(curr_batch_tensor, seq_lengths, batch_first=True)
-                output_scores, _ = self.RNet(pack, len(seq_lengths), seq_lengths)
-                #output_scores = self.RNet(pack, len(seq_lengths), seq_lengths) 
+                # output_scores = self.RNet(curr_batch_tensor)
+                if self.cfg.LSTM.FLAG:
+                    pack = pack_padded_sequence(curr_batch_tensor, seq_lengths,
+                                                batch_first=True)
+                    output_scores, _ = self.RNet(pack, len(seq_lengths),
+                                                 seq_lengths)
+                else:
+                    output_scores, _ = self.RNet(curr_batch_tensor)
                 optimizer.zero_grad()
                 loss = self.loss_func(output_scores, real_label_tensor)
                 total_loss += loss.item()
                 loss.backward()
 
-                # gradient clipping, if necessary
                 clip_grad_value_(self.RNet.parameters(), 2)
                 # plot_grad_flow(self.RNet.named_parameters(), count)
                 # plot_grad_flow_v0(self.RNet.named_parameters(), count)
@@ -270,54 +264,42 @@ class RatingModel(object):
                 iend = num_items
                 # break
                 count = num_items - batch_size
-                #print(count, diff, iend)
-            # curr_batch = Variable(word_embs[count:iend])
             curr_batch = word_embs[count:iend]
             seq_lengths = sl[count:iend]
-            #sort_idx = list(range(batch_size))
+
             sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
             seq_lengths.sort(reverse=True)
             curr_batch = curr_batch[sort_idx]
             curr_batch = curr_batch[:, :seq_lengths[0], :]
+
             if self.cfg.CUDA:
                 curr_batch = curr_batch.cuda()
             curr_batch = Variable(curr_batch)
 
-            pack = pack_padded_sequence(curr_batch, seq_lengths, batch_first=True)
-
-            # output_scores, h = self.RNet(curr_batch)
-            #output_scores = self.RNet(curr_batch)
-
-            output_scores, attn_weights = self.RNet(pack, len(seq_lengths), seq_lengths)
-
-            #output_scores = self.RNet(pack, len(seq_lengths), seq_lengths) 
+            if self.cfg.LSTM.FLAG:
+                pack = pack_padded_sequence(curr_batch, seq_lengths, batch_first=True)
+                output_scores, attn_weights = self.RNet(pack, len(seq_lengths), seq_lengths)
+            else:
+                output_scores, attn_weights = self.RNet(curr_batch)
             output_scores = output_scores.data.tolist()
+
             temp_rating = [0]*len(sort_idx)
             cnt = 0
-            #revert_attn_weights = np.zeros(attn_weights.shape)  # (batch_size, 8, seq_len, seq_len)
+            if attn_weights is not None:
+                revert_attn_weights = np.zeros(attn_weights.shape)  # (batch_size, 8, seq_len, seq_len)
             for s in sort_idx:
                 temp_rating[s] = output_scores[cnt][0]
-                #revert_attn_weights[s, :, :, :] = attn_weights[cnt, :, :, :]
+                if attn_weights is not None:
+                    revert_attn_weights[s, :, :, :] = attn_weights[cnt, :, :, :]
                 cnt += 1
             temp_rating = temp_rating[diff:]
-            #revert_attn_weights = revert_attn_weights[diff:]
-            #all_attn[count+diff:iend, :, :, :] = revert_attn_weights[:, :, :, :]
+            if attn_weights is not None:
+                revert_attn_weights = revert_attn_weights[diff:]
+                all_attn[count+diff:iend, :, :, :] = revert_attn_weights[:, :, :, :]
             for curr_score in temp_rating:
                 rating_lst.append(curr_score*max_diff+min_value)
             count += batch_size
-        return np.array(rating_lst)
-        #return np.array(rating_lst), all_attn  # , all_hiddens
-
-    def analyze(self):
-        """Analyze weights"""
-        self.load_network()
-        self.RNet.eval()
-
-        w = self.RNet.conv1.weight.data.numpy()
-        # w_max, w_min = np.amax(w), np.amin(w)
-        # w_normalized = (w - w_min) / (w_max - w_min) * 255.0
-        # return w_normalized
-        return w
+        return np.array(rating_lst), all_attn
 
 
 def get_word(w):

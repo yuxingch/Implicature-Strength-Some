@@ -54,6 +54,7 @@ cfg.LSTM.HIDDEN_DIM = 200
 cfg.LSTM.DROP_PROB = 0.2
 cfg.LSTM.LAYERS = 2
 cfg.LSTM.BIDIRECTION = True
+cfg.LSTM.ATTN = False
 
 # Training options
 cfg.TRAIN = edict()
@@ -141,7 +142,6 @@ def main():
     parser.add_argument('--mode', dest='mode', default='train')
     parser.add_argument('--t', dest='t', default='rating')
     parser.add_argument('--random', dest='random_vector', default=False)
-    parser.add_argument('--sn', dest='sentence_num', default=0, type=int)
     parser.add_argument('--save_preds', dest='save_preds', default=1)
     parser.add_argument('--name', dest='experiment_name', default="")
     parser.add_argument('--conf', dest='config_file', default="unspecified")
@@ -182,67 +182,24 @@ def main():
     logging.info('Using configurations:')
     logging.info(pprint.pformat(cfg))
 
-    if cfg.MODE == 'analyze':
-        # pass
-        eval_path = "./" + cfg.EXPERIMENT_NAME + "_" + cfg.PREDICTION_TYPE + "_" + str(cfg.SEED)
-        if cfg.IS_RANDOM:
-            eval_path += "_random"
-            load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
-        else:
-            load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
-        # currently need to manually specify the epochs that we want to analyze
-        epoch_to_analyze = [0, 1, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200]
-        epoch_npy = []
-        for epoch in epoch_to_analyze:
-            cfg.RESUME_DIR = load_path + "/RNet_epoch_" + str(epoch) + ".pth"
-            r_model_analyze = RatingModel(cfg, eval_path)
-            epoch_npy.append(r_model_analyze.analyze())
-
-        # fig = plt.figure(figsize=(64, GLOVE_DIM))
-        # fig = plt.figure(figsize=(1, 32))
-        num_cols = 2
-        num_kernels = epoch_npy[4].shape[0]
-        num_rows = 1 + num_kernels // num_cols
-        fig = plt.figure(figsize=(num_cols, num_rows))
-        for i in range(epoch_npy[4].shape[0]):
-            ax1 = fig.add_subplot(num_rows, num_cols, i+1)
-            tensor = np.swapaxes(epoch_npy[4][i], 0, 1)
-            ax1.imshow(tensor)
-            ax1.axis('off')
-            ax1.set_title(i)
-            ax1.set_xticklabels([])
-            ax1.set_yticklabels([])
-        plt.subplots_adjust(wspace=0.1, hspace=0.1)
-        plt.show()
-
-        # -- plot the overall heatmap
-        # heat_map = np.zeros_like(epoch_npy[0])
-        # for i in range(1, columns*rows):
-        #     heat_map += np.absolute(epoch_npy[i] - epoch_npy[i-1])
-        # heat_min, heat_max = np.amin(heat_map), np.max(heat_map)
-        # heat_map = (heat_map - heat_min) / (heat_max - heat_min) * 255.0
-        # plt.imshow(heat_map, cmap='RdPu')
-        # plt.title('most frequently updated weights (scaled from 0 to 255)')
-        # plt.colorbar()
-        # plt.show()
-        return
-    elif cfg.MODE == 'train':
+    if cfg.MODE == 'train':
         load_db = curr_path + "/train_db.csv"
     elif cfg.MODE == 'eval':
         load_db = curr_path + "/" + cfg.PREDON + "_db.csv"
     elif cfg.MODE == 'all':
         load_db = curr_path + "/all_db.csv"
-    # labels, contents, contexts, part, mod, sub = load_dataset("./some_database.csv", load_db, "./swbdext.csv", opt.t)
-    labels, contents, contexts = load_dataset(cfg.SOME_DATABASE, load_db,
-                                              "./swbdext.csv", cfg.PREDICTION_TYPE)
+    labels, target_utterances, contexts = load_dataset(cfg.SOME_DATABASE,
+                                                       load_db,
+                                                       "./swbdext.csv",
+                                                       cfg.PREDICTION_TYPE)
 
     curr_max = 7
     curr_min = 1
     original_labels = []
 
-    # normalize the values
+    # normalize the values [1,7] --> [0,1]
     normalized_labels = []
-    max_diff = 6
+    max_diff = curr_max - curr_min
     keys = []
     for (k, v) in labels.items():
         keys.append(k)
@@ -251,25 +208,25 @@ def main():
         normalized_labels.append(labels[k])
     cfg.BATCH_ITEM_NUM = len(normalized_labels)//cfg.TRAIN.BATCH_SIZE
 
-    content_embs = []
-    plain_embs = []
-    content_embs = []
-    content_embs_np = None
-    content_embs_stack = None
+    # obtain pre-trained word vectors
+    word_embs = []
+    word_embs_np = None
+    word_embs_stack = None
 
     NUMPY_DIR = './datasets/seed_' + str(cfg.SEED)
+    # is contextual or not
     if not cfg.SINGLE_SENTENCE:
         NUMPY_DIR += '_contextual'
+    # type of pre-trained word embedding
     if cfg.IS_ELMO:
-        if cfg.LSTM.FLAG:
-            NUMPY_DIR += '/elmo_' + cfg.ELMO_MODE + '_lstm'
-        else:
-            NUMPY_DIR += '/elmo_' + cfg.ELMO_MODE
-        NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
-        LENGTH_PATH = NUMPY_DIR + "/len_" + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
+        NUMPY_DIR = '/elmo_' + cfg.ELMO_MODE
     elif cfg.IS_BERT:
-        # currently only allow non-lstm
         NUMPY_DIR += '/bert'
+    else:  # default: GloVe
+        NUMPY_DIR += './glove'
+    # Avg/LSTM
+    if cfg.LSTM.FLAG:
+        NUMPY_DIR += '_lstm'
         NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
         LENGTH_PATH = NUMPY_DIR + '/len_' + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
     else:
@@ -277,42 +234,41 @@ def main():
         LENGTH_PATH = NUMPY_DIR + '/len_' + cfg.PREDON + '.npy'
     mkdir_p(NUMPY_DIR)
     print(NUMPY_PATH)
+    logging.info(f'Path to the current word embeddings: {NUMPY_PATH}')
     if os.path.isfile(NUMPY_PATH):
-        content_embs_np = np.load(NUMPY_PATH)
-        content_len_np = np.load(LENGTH_PATH)
-        sl = content_len_np.tolist()
-        content_embs_stack = torch.from_numpy(content_embs_np)
+        word_embs_np = np.load(NUMPY_PATH)
+        len_np = np.load(LENGTH_PATH)
+        sl = len_np.tolist()
+        word_embs_stack = torch.from_numpy(word_embs_np)
     else:
         sl = []
-        for (k, v) in tqdm(contents.items(), total=len(contents)):
+        for (k, v) in tqdm(target_utterances.items(), total=len(target_utterances)):
             if cfg.SINGLE_SENTENCE:
                 # only including the target utterance
                 input_text = v[0]
             else:
-                # include the whole dialogue
+                # discourse context + target utterance
                 context_v = contexts[k]
-                input_text = context_v[0]
-                #print(input_text)
+                input_text = context_v[0] + v[0]
             if cfg.IS_ELMO:
                 curr_emb, l = get_sentence_elmo(input_text, embedder=embedder,
                                                 elmo_mode=cfg.ELMO_MODE,
                                                 not_contextual=cfg.SINGLE_SENTENCE,
                                                 LSTM=cfg.LSTM.FLAG,
                                                 seq_len=cfg.LSTM.SEQ_LEN)
-                sl.append(l)
             elif cfg.IS_BERT:
-                curr_emb, l = get_sentence_bert(input_text, LSTM=cfg.LSTM.FLAG, max_seq_len=cfg.LSTM.SEQ_LEN, is_single=cfg.SINGLE_SENTENCE)
-                sl.append(l)
+                curr_emb, l = get_sentence_bert(input_text, LSTM=cfg.LSTM.FLAG,
+                                                max_seq_len=cfg.LSTM.SEQ_LEN,
+                                                is_single=cfg.SINGLE_SENTENCE)
             else:
                 curr_emb, l = get_sentence(input_text, seq_len=cfg.LSTM.SEQ_LEN)
-                sl.append(l)
-            content_embs.append(curr_emb)
-        #if cfg.IS_ELMO:
+            sl.append(l)
+            word_embs.append(curr_emb)
         np.save(LENGTH_PATH, np.array(sl))
-        content_embs_stack = torch.stack(content_embs)
-        np.save(NUMPY_PATH, content_embs_stack.numpy())
+        word_embs_stack = torch.stack(word_embs)
+        np.save(NUMPY_PATH, word_embs_stack.numpy())
 
-    # -- If want to experiment with random embeddings:
+    # If want to experiment with random embeddings:
     fake_embs = None
     if opt.random_vector:
         print("randomized word vectors")
@@ -327,11 +283,11 @@ def main():
         save_path = "./" + cfg.EXPERIMENT_NAME + "_" + cfg.PREDICTION_TYPE + "_" + str(cfg.SEED)
         if cfg.IS_RANDOM:
             save_path += "_random"
-            r_model = RatingModel(cfg, save_path, sn=opt.sentence_num)
+            r_model = RatingModel(cfg, save_path)
             r_model.train(fake_embs, np.array(normalized_labels))
         else:
-            r_model = RatingModel(cfg, save_path, sn=opt.sentence_num)
-            r_model.train(content_embs_stack.float(), np.array(normalized_labels), sl)
+            r_model = RatingModel(cfg, save_path)
+            r_model.train(word_embs_stack.float(), np.array(normalized_labels), sl)
     else:
         eval_path = "./" + cfg.EXPERIMENT_NAME + "_" + cfg.PREDICTION_TYPE + "_" + str(cfg.SEED)
         epoch_lst = [0, 1]
@@ -339,32 +295,33 @@ def main():
         while i < cfg.TRAIN.TOTAL_EPOCH - cfg.TRAIN.INTERVAL + 1:
             i += cfg.TRAIN.INTERVAL
             epoch_lst.append(i)
-        #epoch_lst = [55, 60, 65, 70, 75, 80]
         logging.info(f'epochs to eval: {epoch_lst}')
         if cfg.IS_RANDOM:
             eval_path += "_random"
-            load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
+            load_path = eval_path + "/Model"
             for epoch in epoch_lst:
                 cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+".pth"
-                r_model_decay = RatingModel(cfg, eval_path)
-                preds_decay = r_model_decay.evaluate(fake_embs, max_diff, curr_min, sl)
+                eval_model = RatingModel(cfg, eval_path)
+                preds = eval_model.evaluate(fake_embs, max_diff, curr_min, sl)
         else:
-            load_path = eval_path + "/Model_" + str(opt.sentence_num) + "S"
+            load_path = eval_path + "/Model"
             max_epoch_dir = None
             max_value = -1.0
             max_epoch = None
             curr_coeff_lst = []
             for epoch in epoch_lst:
-                cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+".pth"
-                r_model_decay = RatingModel(cfg, eval_path)
-                #preds_decay, attn_weights = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min, sl)
-                preds_decay = r_model_decay.evaluate(content_embs_stack.float(), max_diff, curr_min, sl)
-                #attn_path = eval_path+ '/Attention'
-                #mkdir_p(attn_path)
-                #new_file_name = attn_path + '/' + cfg.PREDON + '_attn_epoch' + format(epoch) + '.npy'
-                #np.save(new_file_name, attn_weights)
-                #print(f'Write attention weights to {new_file_name}.')
-                curr_coeff = np.corrcoef(preds_decay, np.array(original_labels))[0, 1]
+                cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+ ".pth"
+                eval_model = RatingModel(cfg, eval_path)
+                preds, attn_weights = eval_model.evaluate(word_embs_stack.float(), max_diff, curr_min, sl)
+
+                if cfg.LSTM.ATTN:
+                    attn_path = eval_path + '/Attention'
+                    mkdir_p(attn_path)
+                    new_file_name = attn_path + '/' + cfg.PREDON + '_attn_epoch' + format(epoch) + '.npy'
+                    np.save(new_file_name, attn_weights)
+                    logging.info(f'Write attention weights to {new_file_name}.')
+
+                curr_coeff = np.corrcoef(preds, np.array(original_labels))[0, 1]
                 curr_coeff_lst.append(curr_coeff)
                 if max_value < curr_coeff:
                     max_value = curr_coeff
@@ -381,26 +338,12 @@ def main():
                     for i in range(len(keys)):
                         k = keys[i]
                         ori = original_labels[i]
-                        pre = preds_decay[i]
+                        pre = preds[i]
                         curr_line = k + '\t' + format(ori) + '\t' + format(pre)
                         f.write(curr_line+"\n")
                     f.close()
+            logging.info(f'Max r = {max_value} achieved at epoch {max_epoch}')
             print(curr_coeff_lst)
-
-        # -- save hidden vector
-        # f = open('./0216_rating/train_first_hidden_layer_epoch80.csv', 'w')
-        # head_line = "Item_ID\tHidden_Vector_Representation\n"
-        # f.write(head_line)
-        # counter = 0
-        # for (k, v) in contents.items():  # <-- only the target
-        #     curr_hidden = all_hiddens[counter, :]
-        #     curr_hidden_list = curr_hidden.tolist()
-        #     temp = [format(flt) for flt in curr_hidden_list]
-        #     curr_line = k + '\t'
-        #     curr_line += ",".join(temp)
-        #     f.write(curr_line+"\n")
-        #     counter += 1
-        # f.close()
     return
 
 if __name__ == "__main__":
