@@ -2,6 +2,7 @@ import argparse
 from collections import defaultdict
 from datetime import datetime
 import logging
+import math
 import os
 import pprint
 import random
@@ -18,10 +19,8 @@ import torch
 from tqdm import tqdm
 import yaml
 
-from models import split_by_whitespace, RatingModel, get_sentence, get_sentence_2d
-from models import get_sentence_elmo
-from models import get_sentence_bert
-from models import parse_paragraph_2, parse_paragraph_3
+from models import split_by_whitespace, RatingModel
+from split_dataset import split_train_test, k_folds_idx
 from utils import mkdir_p
 
 
@@ -42,10 +41,12 @@ cfg.IS_ELMO = True
 cfg.IS_BERT = False
 cfg.ELMO_MODE = 'concat'
 cfg.SAVE_PREDS = False
-cfg.BATCH_ITEM_NUM = 29
-cfg.PREDON = 'eval'
+cfg.BATCH_ITEM_NUM = 30
+cfg.PREDON = 'test'
 cfg.CUDA = False
 cfg.GPU_NUM = 1
+cfg.KFOLDS = 5
+cfg.CROSS_VALIDATION_FLAG = True
 
 cfg.LSTM = edict()
 cfg.LSTM.FLAG = False
@@ -135,7 +136,6 @@ def random_input(num_examples):
 
 
 def main():
-    embedder = ElmoEmbedder()
     parser = argparse.ArgumentParser(
         description='Run ...')
     parser.add_argument('--seed', dest='seed_nm', default=0, type=int)
@@ -168,26 +168,27 @@ def main():
     if cfg.CUDA:
         torch.cuda.manual_seed_all(cfg.SEED)
 
-    # print('Using configurations:')
-    # pprint.pprint(cfg)
-
     curr_path = "./datasets/seed_" + str(cfg.SEED)
     if cfg.EXPERIMENT_NAME == "":
         cfg.EXPERIMENT_NAME = datetime.now().strftime('%m_%d_%H_%M')
     log_path = os.path.join(cfg.EXPERIMENT_NAME, "Logging")
     mkdir_p(log_path)
-    file_handler = logging.FileHandler(os.path.join(log_path, cfg.MODE+"_log.txt"))
+    file_handler = logging.FileHandler(os.path.join(log_path, cfg.MODE + "_log.txt"))
     logging.getLogger().addHandler(file_handler)
 
     logging.info('Using configurations:')
     logging.info(pprint.pformat(cfg))
+    logging.info(f'Using random seed {cfg.SEED}.')
 
     if cfg.MODE == 'train':
         load_db = curr_path + "/train_db.csv"
-    elif cfg.MODE == 'eval':
+    elif cfg.MODE == 'test':
         load_db = curr_path + "/" + cfg.PREDON + "_db.csv"
     elif cfg.MODE == 'all':
         load_db = curr_path + "/all_db.csv"
+
+    if not os.path.isfile(load_db):
+        split_train_test(cfg.SEED, curr_path)
     labels, target_utterances, contexts = load_dataset(cfg.SOME_DATABASE,
                                                        load_db,
                                                        "./swbdext.csv",
@@ -206,7 +207,7 @@ def main():
         original_labels.append(float(v))
         labels[k] = (float(v) - curr_min) / max_diff
         normalized_labels.append(labels[k])
-    cfg.BATCH_ITEM_NUM = len(normalized_labels)//cfg.TRAIN.BATCH_SIZE
+    cfg.BATCH_ITEM_NUM = math.ceil(len(normalized_labels)/float(cfg.TRAIN.BATCH_SIZE))
 
     # obtain pre-trained word vectors
     word_embs = []
@@ -251,17 +252,32 @@ def main():
                 context_v = contexts[k]
                 input_text = context_v[0] + v[0]
             if cfg.IS_ELMO:
+                from models import get_sentence_elmo
+                embedder = ElmoEmbedder()
                 curr_emb, l = get_sentence_elmo(input_text, embedder=embedder,
                                                 elmo_mode=cfg.ELMO_MODE,
                                                 not_contextual=cfg.SINGLE_SENTENCE,
                                                 LSTM=cfg.LSTM.FLAG,
                                                 seq_len=cfg.LSTM.SEQ_LEN)
             elif cfg.IS_BERT:
-                curr_emb, l = get_sentence_bert(input_text, LSTM=cfg.LSTM.FLAG,
-                                                max_seq_len=cfg.LSTM.SEQ_LEN,
-                                                is_single=cfg.SINGLE_SENTENCE)
+                from bert_serving.client import BertClient
+                bc = BertClient()
+                if cfg.SINGLE_SENTENCE:
+                    from models import get_sentence_bert
+                    curr_emb, l = get_sentence_bert(input_text, bc, LSTM=cfg.LSTM.FLAG,
+                                                    max_seq_len=cfg.LSTM.SEQ_LEN,
+                                                    is_single=cfg.SINGLE_SENTENCE)
+                else:
+                    from models import get_sentence_bert_context
+                    curr_emb, l = get_sentence_bert_context(v[0], context_v[0], bc,
+                                                            LSTM=cfg.LSTM.FLAG,
+                                                            max_sentence_len=30,
+                                                            max_context_len=120)
             else:
-                curr_emb, l = get_sentence(input_text, seq_len=cfg.LSTM.SEQ_LEN)
+                from models import get_sentence_glove
+                curr_emb, l = get_sentence_glove(input_text, LSTM=cfg.LSTM.FLAG,
+                                                 not_contextual=cfg.SINGLE_SENTENCE,
+                                                 seq_len=cfg.LSTM.SEQ_LEN)
             sl.append(l)
             word_embs.append(curr_emb)
         np.save(LENGTH_PATH, np.array(sl))
@@ -277,34 +293,69 @@ def main():
         else:
             fake_embs = random_input(408)
 
-    cfg.BATCH_ITEM_NUM = len(sl) // cfg.TRAIN.BATCH_SIZE
-
     if cfg.TRAIN.FLAG:
-        save_path = "./" + cfg.EXPERIMENT_NAME + "_" + cfg.PREDICTION_TYPE + "_" + str(cfg.SEED)
+        logging.info("Start training\n===============================")
+        save_path = "./" + cfg.EXPERIMENT_NAME
         if cfg.IS_RANDOM:
             save_path += "_random"
             r_model = RatingModel(cfg, save_path)
             r_model.train(fake_embs, np.array(normalized_labels))
         else:
-            r_model = RatingModel(cfg, save_path)
-            r_model.train(word_embs_stack.float(), np.array(normalized_labels), sl)
+            X, y, L = dict(), dict(), dict()
+            if not cfg.CROSS_VALIDATION_FLAG:
+                X["train"], X["val"] = word_embs_stack.float(), None
+                y["train"], y["val"] = np.array(normalized_labels), None
+                L["train"], L["val"] = sl, None
+                r_model = RatingModel(cfg, save_path)
+                r_model.train(X, y, L)
+            else:
+                # train with k folds cross validation
+                train_loss_history = np.zeros((cfg.TRAIN.TOTAL_EPOCH, cfg.KFOLDS))
+                val_loss_history = np.zeros((cfg.TRAIN.TOTAL_EPOCH, cfg.KFOLDS))
+                val_r_history = np.zeros((cfg.TRAIN.TOTAL_EPOCH, cfg.KFOLDS))
+                normalized_labels = np.array(normalized_labels)
+                sl_np = np.array(sl)
+                fold_cnt = 1
+                for train_idx, val_idx in k_folds_idx(cfg.KFOLDS, 954, cfg.SEED):
+                    logging.info(f'Fold #{fold_cnt}\n- - - - - - - - - - - - -')
+                    save_path = os.path.join(save_path, format(fold_cnt))
+                    X_train, X_val = word_embs_stack[train_idx], word_embs_stack[val_idx]
+                    y_train, y_val = normalized_labels[train_idx], normalized_labels[val_idx]
+                    L_train, L_val = sl_np[train_idx].tolist(), sl_np[val_idx.tolist].tolist()
+                    X["train"], X["val"] = X_train, X_val
+                    y["train"], y["val"] = y_train, y_val
+                    L["train"], L["val"] = L_train, L_val
+                    r_model = RatingModel(cfg, save_path)
+                    r_model.train(X, y, L)
+                    train_loss_history[:, fold_cnt-1] = np.array(r_model.train_loss_history)
+                    val_loss_history[:, fold_cnt-1] = np.array(r_model.val_loss_history)
+                    val_r_history[:, fold_cnt-1] = np.array(r_model.val_r_history)
+                train_loss_mean = np.mean(train_loss_history, axis=0).tolist()
+                val_loss_mean = np.mean(val_loss_history, axis=0).tolist()
+                val_r_mean = np.mean(val_r_history, axis=0).tolist()
+                max_r = max(val_r_mean)
+                max_r_idx = val_r_mean.index(max_r)
+                logging.info(f'Highest avg. r={max_r:.4f} achieved at epoch {max_r_idx} (on validation set).')
+                logging.info(f'Avg. train loss: {train_loss_mean}')
+                logging.info(f'Avg. validation loss: {val_loss_mean}')
+                logging.info(f'Avg. validation r: {val_r_mean}')
     else:
-        eval_path = "./" + cfg.EXPERIMENT_NAME + "_" + cfg.PREDICTION_TYPE + "_" + str(cfg.SEED)
+        eval_path = "./" + cfg.EXPERIMENT_NAME
         epoch_lst = [0, 1]
         i = 0
         while i < cfg.TRAIN.TOTAL_EPOCH - cfg.TRAIN.INTERVAL + 1:
             i += cfg.TRAIN.INTERVAL
             epoch_lst.append(i)
-        logging.info(f'epochs to eval: {epoch_lst}')
+        logging.info(f'epochs to test: {epoch_lst}')
         if cfg.IS_RANDOM:
             eval_path += "_random"
-            load_path = eval_path + "/Model"
+            load_path = os.path.join(eval_path, "Model")
             for epoch in epoch_lst:
                 cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+".pth"
                 eval_model = RatingModel(cfg, eval_path)
                 preds = eval_model.evaluate(fake_embs, max_diff, curr_min, sl)
         else:
-            load_path = eval_path + "/Model"
+            load_path = os.path.join(eval_path, "Model")
             max_epoch_dir = None
             max_value = -1.0
             max_epoch = None
@@ -315,7 +366,7 @@ def main():
                 preds, attn_weights = eval_model.evaluate(word_embs_stack.float(), max_diff, curr_min, sl)
 
                 if cfg.LSTM.ATTN:
-                    attn_path = eval_path + '/Attention'
+                    attn_path = os.path.join(eval_path, "Attention")
                     mkdir_p(attn_path)
                     new_file_name = attn_path + '/' + cfg.PREDON + '_attn_epoch' + format(epoch) + '.npy'
                     np.save(new_file_name, attn_weights)

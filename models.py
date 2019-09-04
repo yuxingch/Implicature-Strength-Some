@@ -6,11 +6,9 @@ import ssl
 import sys
 import time
 
-# ELMo
 from allennlp.commands.elmo import ElmoEmbedder
 # from allennlp.modules.elmo import Elmo, batch_to_ids
-# BERT
-from bert_serving.client import BertClient
+# from bert_serving.client import BertClient
 from easydict import EasyDict as edict
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
@@ -30,7 +28,6 @@ from utils import mkdir_p, weights_init, save_model
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-bc = BertClient()
 logging.basicConfig(level=logging.INFO)
 
 OPTION_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
@@ -76,8 +73,10 @@ class RatingModel(object):
         self.cfg = cfg
         if self.cfg.TRAIN.FLAG:
             self.model_dir = os.path.join(output_dir, 'Model')
+            self.best_model_dir = os.path.join(output_dir, 'Best Model')
             self.log_dir = os.path.join(output_dir, 'Log')
             mkdir_p(self.model_dir)
+            mkdir_p(self.best_model_dir)
             mkdir_p(self.log_dir)
             self.summary_writer = tf.summary.FileWriter(self.log_dir)
 
@@ -90,6 +89,14 @@ class RatingModel(object):
         self.drop_prob = self.cfg.LSTM.DROP_PROB
         self.interval = self.cfg.TRAIN.INTERVAL
         self.loss_func = nn.MSELoss()
+
+        self.train_loss_history = []
+        self.val_loss_history = []
+        self.val_r_history = []
+
+        self.best_val_loss = float("inf")
+        self.best_val_r = 0.
+        self.best_val_epoch = 0
 
         # gpu
         self.gpus = []
@@ -137,14 +144,23 @@ class RatingModel(object):
             self.RNet.load_state_dict(build_state_dict(self.load_checkpoint))
             logging.info(f'Load from: {self.load_checkpoint}')
 
-    def train(self, word_embs, labels, s_len=None):
+    def train(self, X, y, L):
         """Training process
 
         Positional arguments:
-        word_embs -- vector representations for all examples
-        labels -- ground truth
+        X -- dict(), keys = ["train", "val"]
+             vector representations for train/val examples
+        y -- dict(), keys = ["train", "val"]
+             human judgments for training examples
+        L -- dict(), keys = ["train", "val"]
+             number of tokens in each training example before
+             chopping/padding
         """
-        labels = np.expand_dims(labels, axis=1)
+        X_train, X_val = X["train"], X["val"]
+        y_train, y_val = y["train"], y["val"]
+        L_train, L_val = L["train"], L["val"]
+
+        y_train = np.expand_dims(y_train, axis=1)
         self.load_network()
         # gpu
         if self.cfg.CUDA:
@@ -164,9 +180,9 @@ class RatingModel(object):
         while epoch <= self.total_epoch:
             epoch += 1
             start_t = time.time()
-            batch_inds = list(BatchSampler(RandomSampler(word_embs),
+            batch_inds = list(BatchSampler(RandomSampler(X_train),
                                            batch_size=self.batch_size,
-                                           drop_last=True))
+                                           drop_last=False))
 
             if epoch % self.lr_decay_per_epoch == 0:
                 # update learning rate
@@ -176,36 +192,36 @@ class RatingModel(object):
                     param_group['lr'] = lr
             total_loss = 0
             for i, inds in enumerate(batch_inds, 0):
-                real_labels = labels[inds]
-                curr_batch = word_embs[inds]
-                seq_lengths = [s_len[ii] for ii in inds]
+                y_batch = y_train[inds]
+                X_batch = X_train[inds]
+                seq_lengths = [L_train[ii] for ii in inds]
 
                 sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
                 seq_lengths.sort(reverse=True)
-                curr_batch = curr_batch[sort_idx]
-                real_labels = real_labels[sort_idx]
+                X_batch = X_batch[sort_idx]
+                y_batch = y_batch[sort_idx]
 
                 if self.cfg.CUDA:
-                    curr_batch = curr_batch.cuda()
-                    real_labels = torch.from_numpy(real_labels).float().cuda()
-                    curr_batch_tensor = Variable(curr_batch, requires_grad=True)
-                    real_label_tensor = Variable(real_labels)
+                    X_batch = X_batch.cuda()
+                    y_batch = torch.from_numpy(y_batch).float().cuda()
+                    X_batch_tensor = Variable(X_batch, requires_grad=True)
+                    y_batch_tensor = Variable(y_batch)
                 else:
-                    curr_batch_tensor = Variable(curr_batch, requires_grad=True)
-                    real_label_tensor = Variable(torch.from_numpy(real_labels))
+                    X_batch_tensor = Variable(X_batch, requires_grad=True)
+                    y_batch_tensor = Variable(torch.from_numpy(y_batch))
 
                 # real_seq_len = seq_lengths.copy()
                 # seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
-                # output_scores = self.RNet(curr_batch_tensor)
+                # output_scores = self.RNet(X_batch_tensor)
                 if self.cfg.LSTM.FLAG:
-                    pack = pack_padded_sequence(curr_batch_tensor, seq_lengths,
+                    pack = pack_padded_sequence(X_batch_tensor, seq_lengths,
                                                 batch_first=True)
                     output_scores, _ = self.RNet(pack, len(seq_lengths),
                                                  seq_lengths)
                 else:
-                    output_scores, _ = self.RNet(curr_batch_tensor)
+                    output_scores, _ = self.RNet(X_batch_tensor)
                 optimizer.zero_grad()
-                loss = self.loss_func(output_scores, real_label_tensor)
+                loss = self.loss_func(output_scores, y_batch_tensor)
                 total_loss += loss.item()
                 loss.backward()
 
@@ -219,8 +235,22 @@ class RatingModel(object):
                     # write_summary(loss, 'loss', self.summary_writer, count)
                     count_loss.append((count, loss))
             end_t = time.time()
-            logging.info(f'[{epoch}/{self.total_epoch}][{i+1}/{len(batch_inds)}] Loss: {total_loss:.4f}'
-                         f' Total Time: {(end_t-start_t):.2f}sec')
+
+            # validation
+            if X_val:
+                val_loss, val_r = self.validation(X_val, y_val, L_val)
+                self.RNet.train()   # reset to train mode
+                if val_r > self.best_val_r:
+                    self.best_val_r = val_r
+                    self.best_val_loss = val_loss
+                    self.best_val_epoch = epoch
+                    # save current best
+                    save_model(self.RNet, epoch, self.best_model_dir)
+
+            logging.info(f'[{epoch}/{self.total_epoch}][{i+1}/{len(batch_inds)}]'
+                         f' total train loss: {total_loss:.4f}; total val loss: {val_loss:.4f}'
+                         f' val r: {val_r:.4f}; time: {(end_t-start_t):.2f}sec')
+
             if epoch % self.interval == 0 or epoch == 1:
                 for (a, b) in count_loss:
                     write_summary(b, 'loss', self.summary_writer, a)
@@ -230,15 +260,63 @@ class RatingModel(object):
         for (a, b) in count_loss:
             write_summary(b, 'loss', self.summary_writer, a)
         save_model(self.RNet, self.total_epoch, self.model_dir)
+        logging.info(f'Best epoch {self.best_val_epoch} with val_r = {self.best_val_r:.4f}.')
 
-    def evaluate(self, word_embs, max_diff, min_value, sl):
+    def validation(self, X_val, y_val, L_val=None):
+        self.RNet.eval()
+        batch_inds = list(BatchSampler(RandomSampler(X_val),
+                                       batch_size=self.batch_size,
+                                       drop_last=False))
+        total_val_loss = 0
+        y_preds_lst = []
+        with torch.no_grad():
+            for i, inds in enumerate(batch_inds, 0):
+                y_batch = y_val[inds]
+                X_batch = X_val[inds]
+                seq_lengths = [L_val[ii] for ii in inds]
+
+                sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
+                seq_lengths.sort(reverse=True)
+                X_batch = X_batch[sort_idx]
+                y_batch = y_batch[sort_idx]
+
+                if self.cfg.CUDA:
+                    X_batch = X_batch.cuda()
+                    y_batch = torch.from_numpy(y_batch).float().cuda()
+                    X_batch_tensor = Variable(X_batch, requires_grad=True)
+                    y_batch_tensor = Variable(y_batch)
+                else:
+                    X_batch_tensor = Variable(X_batch, requires_grad=True)
+                    y_batch_tensor = Variable(torch.from_numpy(y_batch))
+
+                if self.cfg.LSTM.FLAG:
+                    pack = pack_padded_sequence(X_batch_tensor, seq_lengths,
+                                                batch_first=True)
+                    output_scores, _ = self.RNet(pack, len(seq_lengths),
+                                                 seq_lengths)
+                else:
+                    output_scores, _ = self.RNet(X_batch_tensor)
+
+                loss = self.loss_func(output_scores, y_batch_tensor)
+                total_val_loss += loss.item()
+
+                output_scores = output_scores.data.tolist()
+
+                temp_rating = [0]*len(sort_idx)
+                cnt = 0
+                for s in sort_idx:
+                    temp_rating[s] = output_scores[cnt][0]
+                    cnt += 1
+                for curr_score in temp_rating:
+                    y_preds_lst.append(curr_score*6 + 1)
+        val_coeff = np.corrcoef(np.array(y_preds_lst), np.array(y_val))[0, 1]
+        return total_val_loss, val_coeff
+
+    def evaluate(self, X, max_diff, min_value, sl):
         """Make predictions and evaluate the model
 
         Positional arguments:
-        word_embs -- vector representations for all examples
-                        if elmo_concat: (408, 3072)
-                        if elmo_avg: (408, 1024)
-                        if GloVe: (408, GLOVE_DIM)
+        X -- vector representations for all examples
         max_diff -- for normalization
         min_value -- for normalization
         """
@@ -249,7 +327,7 @@ class RatingModel(object):
         if self.cfg.CUDA:
             self.RNet.cuda()
 
-        num_items = word_embs.shape[0]
+        num_items = X.shape[0]
         batch_size = min(num_items, self.batch_size)
 
         rating_lst = []
@@ -264,23 +342,23 @@ class RatingModel(object):
                 iend = num_items
                 # break
                 count = num_items - batch_size
-            curr_batch = word_embs[count:iend]
+            X_batch = X[count:iend]
             seq_lengths = sl[count:iend]
 
             sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
             seq_lengths.sort(reverse=True)
-            curr_batch = curr_batch[sort_idx]
-            curr_batch = curr_batch[:, :seq_lengths[0], :]
+            X_batch = X_batch[sort_idx]
+            X_batch = X_batch[:, :seq_lengths[0], :]
 
             if self.cfg.CUDA:
-                curr_batch = curr_batch.cuda()
-            curr_batch = Variable(curr_batch)
+                X_batch = X_batch.cuda()
+            X_batch = Variable(X_batch)
 
             if self.cfg.LSTM.FLAG:
-                pack = pack_padded_sequence(curr_batch, seq_lengths, batch_first=True)
+                pack = pack_padded_sequence(X_batch, seq_lengths, batch_first=True)
                 output_scores, attn_weights = self.RNet(pack, len(seq_lengths), seq_lengths)
             else:
-                output_scores, attn_weights = self.RNet(curr_batch)
+                output_scores, attn_weights = self.RNet(X_batch)
             output_scores = output_scores.data.tolist()
 
             temp_rating = [0]*len(sort_idx)
@@ -317,7 +395,7 @@ def split_by_whitespace(sentence):
     return [w for w in words if w]
 
 
-def get_sentence(s, seq_len=30):
+def get_sentence_glove(s, LSTM=False, not_contextual=True, seq_len=30):
     s = s.replace('\'ve', ' \'ve')
     s = s.replace('\'re', ' \'re')
     s = s.replace('\'ll', ' \'ll')
@@ -343,23 +421,26 @@ def get_sentence(s, seq_len=30):
         s = s.replace('doeuvres', 'd\'oeuvres')
         s = s.replace('mumblex', 'mumble')
         raw_tokens += split_by_whitespace(s)
-    # lst = [get_word(w.lower()) for w in raw_tokens]
-    lst = [_BOS]
+    lst = []
+    if LSTM:
+        lst = [_BOS]
     for w in raw_tokens:
         curr_emb = get_word(w.lower())
         if torch.all(torch.eq(curr_emb, _UNK)):
             continue
         else:
             lst.append(curr_emb)
-    lst.append(_EOS)
+    if LSTM:
+        lst.append(_EOS)
     all_embs = torch.stack(lst)
-    #if not LSTM:
-        #return torch.mean(all_embs, 0), raw_tokens
-    sentence_len = len(lst)
-    expected_embedding_padded, sl = context_padded(all_embs, seq_len)
+    if not LSTM:
+        return torch.mean(all_embs, 0), len(raw_tokens)
+    if not not_contextual:
+        expected_embedding_padded, sl = context_padded(all_embs, seq_len)
+    else:
+        expected_embedding_padded, sl = padded(all_embs, seq_len)
     expected_embedding_tensor = torch.from_numpy(expected_embedding_padded)
     return expected_embedding_tensor, sl
-    #return torch.mean(all_embs, 0), raw_tokens  # embedding_size
 
 
 def get_sentence_2d(s, max_len=32):
@@ -394,71 +475,6 @@ def get_sentence_2d(s, max_len=32):
         lst = [get_word(w.lower()) for w in raw_tokens]
     all_embs = torch.stack(lst).permute(1, 0)
     return all_embs, raw_tokens
-
-
-def parse_paragraph_2(p, target_tokens):
-    modified_p = re.sub('#', '.', p)
-    ss = re.sub('[^a-zA-Z0-9 \n\.]', '', modified_p).strip('.').split('.')
-    ls = list(filter(None, ss))
-    total_len = len(ls)
-    next_tokens = None
-    next_tokens_II = None
-
-    if total_len > 0:
-        next_tokens = split_by_whitespace(ls[total_len-1])
-    if total_len > 1:
-        next_tokens_II = split_by_whitespace(ls[total_len-2])
-
-    if next_tokens:
-        lst_next = [get_word(w.lower()) for w in next_tokens]
-        next_embs = torch.stack(lst_next)
-        next_mean = torch.mean(next_embs, 0)
-    else:
-        next_mean = torch.FloatTensor(1, GLOVE_DIM).zero_()
-    if next_tokens_II:
-        lst_next_II = [get_word(w.lower()) for w in next_tokens_II]
-        next_embs_II = torch.stack(lst_next_II)
-        next_mean_II = torch.mean(next_embs_II, 0)
-    else:
-        next_mean_II = torch.FloatTensor(1, GLOVE_DIM).zero_()
-    return next_mean, next_mean_II
-
-
-def parse_paragraph_3(p, target_tokens):  # <--- 3
-    modified_p = re.sub('#', '.', p)
-    ss = re.sub('[^a-zA-Z0-9 \n\.]', '', modified_p).strip('.').split('.')
-    # print(ss)
-    ls = list(filter(None, ss))
-    total_len = len(ls)
-    next_tokens = None
-    next_tokens_II = None
-
-    if total_len > 0:
-        next_tokens = split_by_whitespace(ls[total_len-1])
-    if total_len > 1:
-        next_tokens_II = split_by_whitespace(ls[total_len-2])
-    if total_len > 2:
-        next_tokens_III = split_by_whitespace(ls[total_len-3])
-    # print(next_tokens, next_tokens_II, next_tokens_III)
-    if next_tokens:
-        lst_next = [get_word(w.lower()) for w in next_tokens]
-        next_embs = torch.stack(lst_next)
-        next_mean = torch.mean(next_embs, 0)
-    else:
-        next_mean = torch.FloatTensor(1, GLOVE_DIM).zero_()
-    if next_tokens_II:
-        lst_next_II = [get_word(w.lower()) for w in next_tokens_II]
-        next_embs_II = torch.stack(lst_next_II)
-        next_mean_II = torch.mean(next_embs_II, 0)
-    else:
-        next_mean_II = torch.FloatTensor(1, GLOVE_DIM).zero_()
-    if next_tokens_III:
-        lst_next_III = [get_word(w.lower()) for w in next_tokens_III]
-        next_embs_III = torch.stack(lst_next_III)
-        next_mean_III = torch.mean(next_embs_III, 0)
-    else:
-        next_mean_III = torch.FloatTensor(1, GLOVE_DIM).zero_()   
-    return next_mean, next_mean_II, next_mean_III
 
 
 def tokenizer(s, pad_symbol=True, seq_len=None, from_right=True):
@@ -507,9 +523,9 @@ def tokenizer(s, pad_symbol=True, seq_len=None, from_right=True):
 # Elmo
 def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM=False, seq_len=None):
     """Get ELMo vector representation for each sentence"""
-    raw_tokens = tokenizer(s)
-    expected_embedding = embedder.embed_sentence(raw_tokens)  # [3, actual_sentence_len+2, 1024]
     if not LSTM:
+        raw_tokens = tokenizer(s, pad_symbol=False)
+        expected_embedding = embedder.embed_sentence(raw_tokens)
         sl = seq_len
         expected_embedding = np.mean(expected_embedding, axis=1)    # averaging on # of words
         if elmo_mode == 'concat':
@@ -517,6 +533,8 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM
         elif elmo_mode == 'avg':
             expected_embedding = np.mean(expected_embedding, axis=0)
     else:
+        raw_tokens = tokenizer(s)
+        expected_embedding = embedder.embed_sentence(raw_tokens)  # [3, actual_sentence_len+2, 1024]
         sentence_len = expected_embedding.shape[1]
         if elmo_mode == 'concat':
             # [seq_len, 3024]
@@ -529,27 +547,40 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM
         else:
             expected_embedding_padded, sl = context_padded(expected_embedding, seq_len)
     expected_embedding_tensor = torch.from_numpy(expected_embedding_padded)
-    #expected_embedding_tensor = torch.from_numpy(expected_embedding)
+    # expected_embedding_tensor = torch.from_numpy(expected_embedding)
     return expected_embedding_tensor, sl
 
 
 # BERT
-def get_sentence_bert(s, LSTM=False, max_seq_len=None, is_single=True):
-    # if seq_len is None:
-    #     assert not LSTM
-    # else:
-    #     assert LSTM
-    # TODO: allow both non-LSTM and LSTM
+def get_sentence_bert(s, bc, LSTM=False, max_seq_len=None, is_single=True):
     # first tokenize the sentence
     tokens = tokenizer(s, pad_symbol=False, seq_len=max_seq_len, from_right=is_single)
     # bc.encode() will return a ndarray
-    #print(len(tokens))
     bert_output = bc.encode([tokens], is_tokenized=True)[0]  # (1, max_seq_len, 768)
-    #print(bert_output.shape)
     bert_output = bert_output.squeeze()  # (max_seq_len, 768)
     sl = len(tokens)+2
-    #print(bert_output.shape)
-    return torch.from_numpy(bert_output), sl
+    if LSTM:
+        return torch.from_numpy(bert_output), sl
+    else:
+        bert_mean = np.mean(bert_output, axis=0)
+        return torch.from_numpy(bert_mean), sl
+
+
+def get_sentence_bert_context(s, c, bc, LSTM=False, max_sentence_len=None, max_context_len=None):
+    tokens = tokenizer(s, pad_symbol=False, seq_len=max_sentence_len, from_right=True)
+    new_s = " ".join(tokens)
+    sl = len(tokens)+2
+    tokens = tokenizer(c, pad_symbol=False, seq_len=max_context_len, from_right=False)
+    new_c = " ".join(tokens)
+    bert_input = new_s + " ||| " + new_c
+    bert_output = bc.encode([bert_input])
+    bert_output = bert_output.squeeze()
+    bert_output = bert_output[:max_sentence_len, :]
+    if LSTM:
+        return torch.from_numpy(bert_output), sl
+    else:
+        bert_mean = np.mean(bert_output, axis=0)
+        return torch.from_numpy(bert_mean), sl
 
 
 def padded(emb, seq_len):

@@ -124,6 +124,7 @@ class BiLSTM(nn.Module):
 
         output - Tensor shape (batch_size, 1)
         """
+        assert x.shape[0] == batch_size
         if self.bidirect:
             h0 = torch.randn(self.num_layers*2, batch_size, self.hidden_dim)
             c0 = torch.randn(self.num_layers*2, batch_size, self.hidden_dim)
