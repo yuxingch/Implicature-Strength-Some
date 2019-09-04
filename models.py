@@ -176,8 +176,9 @@ class RatingModel(object):
 
         count_loss = []
         if epoch == 0:
+            # Purely random
             save_model(self.RNet, epoch, self.model_dir)
-        while epoch <= self.total_epoch:
+        while epoch < self.total_epoch:
             epoch += 1
             start_t = time.time()
             batch_inds = list(BatchSampler(RandomSampler(X_train),
@@ -245,6 +246,9 @@ class RatingModel(object):
                     self.best_val_epoch = epoch
                     # save current best
                     save_model(self.RNet, epoch, self.best_model_dir)
+                self.val_loss_history.append(val_loss)
+                self.val_r_history.append(val_r)
+            self.train_loss_history.append(total_loss)
 
             logging.info(f'[{epoch}/{self.total_epoch}][{i+1}/{len(batch_inds)}]'
                          f' total train loss: {total_loss:.4f}; total val loss: {val_loss:.4f}'

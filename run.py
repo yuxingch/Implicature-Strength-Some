@@ -306,7 +306,7 @@ def main():
                 fold_cnt = 1
                 for train_idx, val_idx in k_folds_idx(cfg.KFOLDS, 954, cfg.SEED):
                     logging.info(f'Fold #{fold_cnt}\n- - - - - - - - - - - - -')
-                    save_path = os.path.join(save_path, format(fold_cnt))
+                    save_sub_path = os.path.join(save_path, format(fold_cnt))
                     X_train, X_val = word_embs_stack[train_idx], word_embs_stack[val_idx]
                     y_train, y_val = normalized_labels[train_idx], normalized_labels[val_idx]
                     L_train, L_val = sl_np[train_idx].tolist(), sl_np[val_idx].tolist()
@@ -314,17 +314,17 @@ def main():
                     y["train"], y["val"] = y_train, y_val
                     L["train"], L["val"] = L_train, L_val
                     cfg.BATCH_ITEM_NUM = len(L_train)//cfg.TRAIN.BATCH_SIZE
-                    r_model = RatingModel(cfg, save_path)
+                    r_model = RatingModel(cfg, save_sub_path)
                     r_model.train(X, y, L)
                     train_loss_history[:, fold_cnt-1] = np.array(r_model.train_loss_history)
                     val_loss_history[:, fold_cnt-1] = np.array(r_model.val_loss_history)
                     val_r_history[:, fold_cnt-1] = np.array(r_model.val_r_history)
                     fold_cnt += 1
-                train_loss_mean = np.mean(train_loss_history, axis=0).tolist()
-                val_loss_mean = np.mean(val_loss_history, axis=0).tolist()
-                val_r_mean = np.mean(val_r_history, axis=0).tolist()
+                train_loss_mean = np.mean(train_loss_history, axis=1).tolist()
+                val_loss_mean = np.mean(val_loss_history, axis=1).tolist()
+                val_r_mean = np.mean(val_r_history, axis=1).tolist()
                 max_r = max(val_r_mean)
-                max_r_idx = val_r_mean.index(max_r)
+                max_r_idx = 1 + val_r_mean.index(max_r)
                 logging.info(f'Highest avg. r={max_r:.4f} achieved at epoch {max_r_idx} (on validation set).')
                 logging.info(f'Avg. train loss: {train_loss_mean}')
                 logging.info(f'Avg. validation loss: {val_loss_mean}')
