@@ -194,7 +194,7 @@ def main():
         original_labels.append(float(v))
         labels[k] = (float(v) - curr_min) / max_diff
         normalized_labels.append(labels[k])
-    cfg.BATCH_ITEM_NUM = math.ceil(len(normalized_labels)/float(cfg.TRAIN.BATCH_SIZE))
+    # cfg.BATCH_ITEM_NUM = math.ceil(len(normalized_labels)/float(cfg.TRAIN.BATCH_SIZE))
 
     # obtain pre-trained word vectors
     word_embs = []
@@ -290,6 +290,7 @@ def main():
         else:
             X, y, L = dict(), dict(), dict()
             if not cfg.CROSS_VALIDATION_FLAG:
+                cfg.BATCH_ITEM_NUM = len(normalized_labels)//cfg.TRAIN.BATCH_SIZE
                 X["train"], X["val"] = word_embs_stack.float(), None
                 y["train"], y["val"] = np.array(normalized_labels), None
                 L["train"], L["val"] = sl, None
@@ -312,6 +313,7 @@ def main():
                     X["train"], X["val"] = X_train, X_val
                     y["train"], y["val"] = y_train, y_val
                     L["train"], L["val"] = L_train, L_val
+                    cfg.BATCH_ITEM_NUM = len(L_train)//cfg.TRAIN.BATCH_SIZE
                     r_model = RatingModel(cfg, save_path)
                     r_model.train(X, y, L)
                     train_loss_history[:, fold_cnt-1] = np.array(r_model.train_loss_history)

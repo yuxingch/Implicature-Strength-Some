@@ -182,7 +182,7 @@ class RatingModel(object):
             start_t = time.time()
             batch_inds = list(BatchSampler(RandomSampler(X_train),
                                            batch_size=self.batch_size,
-                                           drop_last=False))
+                                           drop_last=True))
 
             if epoch % self.lr_decay_per_epoch == 0:
                 # update learning rate
@@ -237,7 +237,7 @@ class RatingModel(object):
             end_t = time.time()
 
             # validation
-            if X_val:
+            if X_val is not None:
                 val_loss, val_r = self.validation(X_val, y_val, L_val)
                 self.RNet.train()   # reset to train mode
                 if val_r > self.best_val_r:
@@ -266,11 +266,13 @@ class RatingModel(object):
         self.RNet.eval()
         batch_inds = list(BatchSampler(RandomSampler(X_val),
                                        batch_size=self.batch_size,
-                                       drop_last=False))
+                                       drop_last=True))
         total_val_loss = 0
         y_preds_lst = []
+        val_inds = []
         with torch.no_grad():
             for i, inds in enumerate(batch_inds, 0):
+                val_inds += inds
                 y_batch = y_val[inds]
                 X_batch = X_val[inds]
                 seq_lengths = [L_val[ii] for ii in inds]
@@ -309,6 +311,8 @@ class RatingModel(object):
                     cnt += 1
                 for curr_score in temp_rating:
                     y_preds_lst.append(curr_score*6 + 1)
+        val_inds = list(set(val_inds))
+        y_val = y_val[val_inds]
         val_coeff = np.corrcoef(np.array(y_preds_lst), np.array(y_val))[0, 1]
         return total_val_loss, val_coeff
 
