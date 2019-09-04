@@ -122,7 +122,7 @@ class RatingModel(object):
         elif self.cfg.IS_BERT:
             vec_dim = BERT_DIM
         if self.cfg.LSTM.FLAG:
-            if self.cfg.ATTN:
+            if self.cfg.LSTM.ATTN:
                 self.RNet = BiLSTMAttn(vec_dim, self.cfg.LSTM.SEQ_LEN,
                                        self.cfg.LSTM.HIDDEN_DIM,
                                        self.cfg.LSTM.LAYERS,
