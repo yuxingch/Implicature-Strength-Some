@@ -308,7 +308,7 @@ def main():
                     save_path = os.path.join(save_path, format(fold_cnt))
                     X_train, X_val = word_embs_stack[train_idx], word_embs_stack[val_idx]
                     y_train, y_val = normalized_labels[train_idx], normalized_labels[val_idx]
-                    L_train, L_val = sl_np[train_idx].tolist(), sl_np[val_idx.tolist].tolist()
+                    L_train, L_val = sl_np[train_idx].tolist(), sl_np[val_idx].tolist()
                     X["train"], X["val"] = X_train, X_val
                     y["train"], y["val"] = y_train, y_val
                     L["train"], L["val"] = L_train, L_val
