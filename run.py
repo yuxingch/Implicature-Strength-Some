@@ -207,11 +207,11 @@ def main():
         NUMPY_DIR += '_contextual'
     # type of pre-trained word embedding
     if cfg.IS_ELMO:
-        NUMPY_DIR = '/elmo_' + cfg.ELMO_MODE
+        NUMPY_DIR += '/elmo_' + cfg.ELMO_MODE
     elif cfg.IS_BERT:
         NUMPY_DIR += '/bert'
     else:  # default: GloVe
-        NUMPY_DIR += './glove'
+        NUMPY_DIR += '/glove'
     # Avg/LSTM
     if cfg.LSTM.FLAG:
         NUMPY_DIR += '_lstm'

@@ -202,7 +202,7 @@ class RatingModel(object):
                 y_batch = y_batch[sort_idx]
 
                 if self.cfg.CUDA:
-                    X_batch = X_batch.cuda()
+                    X_batch = X_batch.float().cuda()
                     y_batch = torch.from_numpy(y_batch).float().cuda()
                     X_batch_tensor = Variable(X_batch, requires_grad=True)
                     y_batch_tensor = Variable(y_batch)
@@ -216,8 +216,7 @@ class RatingModel(object):
                 if self.cfg.LSTM.FLAG:
                     pack = pack_padded_sequence(X_batch_tensor, seq_lengths,
                                                 batch_first=True)
-                    output_scores, _ = self.RNet(pack, len(seq_lengths),
-                                                 seq_lengths)
+                    output_scores, _ = self.RNet(pack, len(seq_lengths), seq_lengths)
                 else:
                     output_scores, _ = self.RNet(X_batch_tensor)
                 optimizer.zero_grad()
@@ -283,7 +282,7 @@ class RatingModel(object):
                 y_batch = y_batch[sort_idx]
 
                 if self.cfg.CUDA:
-                    X_batch = X_batch.cuda()
+                    X_batch = X_batch.float().cuda()
                     y_batch = torch.from_numpy(y_batch).float().cuda()
                     X_batch_tensor = Variable(X_batch, requires_grad=True)
                     y_batch_tensor = Variable(y_batch)
