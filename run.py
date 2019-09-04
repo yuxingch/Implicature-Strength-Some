@@ -138,12 +138,6 @@ def random_input(num_examples):
 def main():
     parser = argparse.ArgumentParser(
         description='Run ...')
-    parser.add_argument('--seed', dest='seed_nm', default=0, type=int)
-    parser.add_argument('--mode', dest='mode', default='train')
-    parser.add_argument('--t', dest='t', default='rating')
-    parser.add_argument('--random', dest='random_vector', default=False)
-    parser.add_argument('--save_preds', dest='save_preds', default=1)
-    parser.add_argument('--name', dest='experiment_name', default="")
     parser.add_argument('--conf', dest='config_file', default="unspecified")
     opt = parser.parse_args()
     print(opt)
@@ -153,14 +147,7 @@ def main():
         if not cfg.MODE == 'train':
             cfg.TRAIN.FLAG = False
     else:
-        cfg.SEED = opt.seed_nm
-        cfg.PREDICTION_TYPE = opt.t
-        cfg.IS_RANDOM = opt.random_vector
-        cfg.SAVE_PREDS = opt.save_preds
-        cfg.EXPERIMENT_NAME = opt.experiment_name
-        if not opt.mode == 'train':
-            cfg.TRAIN.FLAG = False
-            cfg.MODE = opt.mode
+        print("Using default settings.")
 
     # random seed
     random.seed(cfg.SEED)
@@ -286,7 +273,7 @@ def main():
 
     # If want to experiment with random embeddings:
     fake_embs = None
-    if opt.random_vector:
+    if cfg.IS_RANDOM:
         print("randomized word vectors")
         if cfg.TRAIN.FLAG:
             fake_embs = random_input(954)
@@ -330,6 +317,7 @@ def main():
                     train_loss_history[:, fold_cnt-1] = np.array(r_model.train_loss_history)
                     val_loss_history[:, fold_cnt-1] = np.array(r_model.val_loss_history)
                     val_r_history[:, fold_cnt-1] = np.array(r_model.val_r_history)
+                    fold_cnt += 1
                 train_loss_mean = np.mean(train_loss_history, axis=0).tolist()
                 val_loss_mean = np.mean(val_loss_history, axis=0).tolist()
                 val_r_mean = np.mean(val_r_history, axis=0).tolist()
@@ -394,7 +382,7 @@ def main():
                         f.write(curr_line+"\n")
                     f.close()
             logging.info(f'Max r = {max_value} achieved at epoch {max_epoch}')
-            print(curr_coeff_lst)
+            logging.info(f'r by epoch: {curr_coeff_lst}')
     return
 
 if __name__ == "__main__":
