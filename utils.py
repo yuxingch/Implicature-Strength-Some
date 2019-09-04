@@ -58,7 +58,7 @@ def save_model(RNet, epoch, model_dir):
          'state_dict': RNet.state_dict()},
         '%s/RNet_epoch_%d.pth' % (model_dir, epoch)
     )
-    print('Save model')
+    print(f'Save model to {model_dir}')
 
 
 def find_nearest_words(at_dim, glove_dim=100):
