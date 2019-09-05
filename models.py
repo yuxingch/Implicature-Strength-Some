@@ -253,11 +253,11 @@ class RatingModel(object):
                 for (a, b) in count_loss:
                     write_summary(b, 'loss', self.summary_writer, a)
                 count_loss = []
-                save_model(self.RNet, epoch, self.model_dir)
+                #save_model(self.RNet, epoch, self.model_dir)
         # save checkpoint for the last epoch
         for (a, b) in count_loss:
             write_summary(b, 'loss', self.summary_writer, a)
-        save_model(self.RNet, self.total_epoch, self.model_dir)
+        #save_model(self.RNet, self.total_epoch, self.model_dir)
         logging.info(f'Best epoch {self.best_val_epoch} with val_r = {self.best_val_r:.4f}.')
 
     def validation(self, X_val, y_val, L_val=None):
