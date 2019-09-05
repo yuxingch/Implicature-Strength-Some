@@ -1,0 +1,28 @@
+SOME_DATABASE: './some_database.csv'
+CONFIG_NAME: 'cv_bert_lstm_attn'
+EXPERIMENT_NAME: 'cv_bert_lstm_attn'
+PREDON: 'train'
+SINGLE_SENTENCE: True
+CUDA: True
+IS_ELMO: False
+IS_BERT: True
+
+
+TRAIN:
+    LR: 0.02
+    TOTAL_EPOCH: 10
+    LR_DECAY_EPOCH: 5
+    LR_DECAY_RATE: 0.8
+    INTERVAL: 1
+    START_EPOCH: 0
+    DROPOUT:
+        FC_1: 0.2
+        FC_2: 0.2
+
+LSTM:
+    FLAG: True
+    SEQ_LEN: 30
+    HIDDEN_DIM: 512
+    LAYERS: 2
+    DROP_PROB: 0.2
+    ATTN: True

@@ -122,7 +122,7 @@ class RatingModel(object):
         elif self.cfg.IS_BERT:
             vec_dim = BERT_DIM
         if self.cfg.LSTM.FLAG:
-            if self.cfg.ATTN:
+            if self.cfg.LSTM.ATTN:
                 self.RNet = BiLSTMAttn(vec_dim, self.cfg.LSTM.SEQ_LEN,
                                        self.cfg.LSTM.HIDDEN_DIM,
                                        self.cfg.LSTM.LAYERS,
@@ -176,13 +176,14 @@ class RatingModel(object):
 
         count_loss = []
         if epoch == 0:
+            # Purely random
             save_model(self.RNet, epoch, self.model_dir)
-        while epoch <= self.total_epoch:
+        while epoch < self.total_epoch:
             epoch += 1
             start_t = time.time()
             batch_inds = list(BatchSampler(RandomSampler(X_train),
                                            batch_size=self.batch_size,
-                                           drop_last=False))
+                                           drop_last=True))
 
             if epoch % self.lr_decay_per_epoch == 0:
                 # update learning rate
@@ -202,7 +203,7 @@ class RatingModel(object):
                 y_batch = y_batch[sort_idx]
 
                 if self.cfg.CUDA:
-                    X_batch = X_batch.cuda()
+                    X_batch = X_batch.float().cuda()
                     y_batch = torch.from_numpy(y_batch).float().cuda()
                     X_batch_tensor = Variable(X_batch, requires_grad=True)
                     y_batch_tensor = Variable(y_batch)
@@ -216,8 +217,7 @@ class RatingModel(object):
                 if self.cfg.LSTM.FLAG:
                     pack = pack_padded_sequence(X_batch_tensor, seq_lengths,
                                                 batch_first=True)
-                    output_scores, _ = self.RNet(pack, len(seq_lengths),
-                                                 seq_lengths)
+                    output_scores, _ = self.RNet(pack, len(seq_lengths), seq_lengths)
                 else:
                     output_scores, _ = self.RNet(X_batch_tensor)
                 optimizer.zero_grad()
@@ -237,7 +237,7 @@ class RatingModel(object):
             end_t = time.time()
 
             # validation
-            if X_val:
+            if X_val is not None:
                 val_loss, val_r = self.validation(X_val, y_val, L_val)
                 self.RNet.train()   # reset to train mode
                 if val_r > self.best_val_r:
@@ -246,6 +246,9 @@ class RatingModel(object):
                     self.best_val_epoch = epoch
                     # save current best
                     save_model(self.RNet, epoch, self.best_model_dir)
+                self.val_loss_history.append(val_loss)
+                self.val_r_history.append(val_r)
+            self.train_loss_history.append(total_loss)
 
             logging.info(f'[{epoch}/{self.total_epoch}][{i+1}/{len(batch_inds)}]'
                          f' total train loss: {total_loss:.4f}; total val loss: {val_loss:.4f}'
@@ -266,11 +269,13 @@ class RatingModel(object):
         self.RNet.eval()
         batch_inds = list(BatchSampler(RandomSampler(X_val),
                                        batch_size=self.batch_size,
-                                       drop_last=False))
+                                       drop_last=True))
         total_val_loss = 0
         y_preds_lst = []
+        val_inds = []
         with torch.no_grad():
             for i, inds in enumerate(batch_inds, 0):
+                val_inds += inds
                 y_batch = y_val[inds]
                 X_batch = X_val[inds]
                 seq_lengths = [L_val[ii] for ii in inds]
@@ -281,7 +286,7 @@ class RatingModel(object):
                 y_batch = y_batch[sort_idx]
 
                 if self.cfg.CUDA:
-                    X_batch = X_batch.cuda()
+                    X_batch = X_batch.float().cuda()
                     y_batch = torch.from_numpy(y_batch).float().cuda()
                     X_batch_tensor = Variable(X_batch, requires_grad=True)
                     y_batch_tensor = Variable(y_batch)
@@ -309,6 +314,8 @@ class RatingModel(object):
                     cnt += 1
                 for curr_score in temp_rating:
                     y_preds_lst.append(curr_score*6 + 1)
+        val_inds = list(set(val_inds))
+        y_val = y_val[val_inds]
         val_coeff = np.corrcoef(np.array(y_preds_lst), np.array(y_val))[0, 1]
         return total_val_loss, val_coeff
 

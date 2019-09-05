@@ -132,8 +132,8 @@ class BiLSTM(nn.Module):
             h0 = torch.randn(self.num_layers, batch_size, self.hidden_dim)
             c0 = torch.randn(self.num_layers, batch_size, self.hidden_dim)
         if self.is_gpu:
-            h0 = h0.cuda()
-            c0 = c0.cuda()
+            h0 = h0.float().cuda()
+            c0 = c0.float().cuda()
         x, _ = self.lstm(x, (h0, c0))
         x, _ = nn.utils.rnn.pad_packed_sequence(x, batch_first=True)
         if self.bidirect:
@@ -210,8 +210,8 @@ class BiLSTMAttn(nn.Module):
             h0 = torch.randn(self.num_layers, batch_size, self.hidden_dim)
             c0 = torch.randn(self.num_layers, batch_size, self.hidden_dim)
         if self.is_gpu:
-            h0 = h0.cuda()
-            c0 = c0.cuda()
+            h0 = h0.float().cuda()
+            c0 = c0.float().cuda()
         x, _ = self.lstm(x, (h0, c0))
         x, _ = nn.utils.rnn.pad_packed_sequence(x, batch_first=True)
         if self.bidirect:
