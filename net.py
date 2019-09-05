@@ -119,10 +119,10 @@ class BiLSTM(nn.Module):
     def forward(self, x, batch_size, seq_lens):
         """
 
-        x - Tensor shape (batch_size, seq_len, input_size)
+        x - Tensor shape (curr_batch_size, seq_len, input_size)
                 we need to permute the first and the second axis
 
-        output - Tensor shape (batch_size, 1)
+        output - Tensor shape (curr_batch_size, 1)
         """
         assert x.shape[0] == batch_size
         if self.bidirect:
@@ -184,7 +184,7 @@ class BiLSTMAttn(nn.Module):
                             dropout=self.drop_prob,
                             bidirectional=self.bidirect)
         if self.bidirect:
-            self.attention = MultiHeadAttention(self.batch_size, self.hidden_dim*2, 8, self.is_gpu)
+            self.attention = MultiHeadAttention(self.hidden_dim*2, 8, self.is_gpu)
             self.fc1 = fc_layer(self.hidden_dim*2, self.hidden_dim, self.dropout[0])
             self.fc2 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[1])
             self.get_score = nn.Sequential(
@@ -225,10 +225,9 @@ class BiLSTMAttn(nn.Module):
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, batch_size, lstm_hidden_size, h, is_gpu=False):
+    def __init__(self, lstm_hidden_size, h, is_gpu=False):
         super(MultiHeadAttention, self).__init__()
         assert lstm_hidden_size % h == 0
-        self.batch_size = batch_size
         self.num_head = h
         self.is_gpu = is_gpu
         self.d_m = lstm_hidden_size
@@ -271,10 +270,11 @@ class MultiHeadAttention(nn.Module):
         self.attn -- (batch_size, num_head, max_seq_len, max_seq_len)
         """
         # mask = (x != 0).unsqueeze(-2)
+        curr_batch_size = x.shape[0]
         mask = self.get_mask(x, seq_lens)
-        x = x.view(self.batch_size, -1, self.num_head, self.d_k).transpose(1, 2)
+        x = x.view(curr_batch_size, -1, self.num_head, self.d_k).transpose(1, 2)
         x, self.attn = self.attention_func(x, mask)
-        x = x.transpose(1, 2).contiguous().view(self.batch_size, -1, self.num_head*self.d_k)
+        x = x.transpose(1, 2).contiguous().view(curr_batch_size, -1, self.num_head*self.d_k)
         x = self.linear(x)
         if self.is_gpu:
             self.attn = self.attn.cpu()

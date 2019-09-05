@@ -15,7 +15,6 @@ import matplotlib.lines as mlines
 import numpy as np
 import tensorflow as tf
 import torch
-from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.optim as optim
@@ -183,7 +182,7 @@ class RatingModel(object):
             start_t = time.time()
             batch_inds = list(BatchSampler(RandomSampler(X_train),
                                            batch_size=self.batch_size,
-                                           drop_last=True))
+                                           drop_last=False))
 
             if epoch % self.lr_decay_per_epoch == 0:
                 # update learning rate
@@ -201,27 +200,23 @@ class RatingModel(object):
                 seq_lengths.sort(reverse=True)
                 X_batch = X_batch[sort_idx]
                 y_batch = y_batch[sort_idx]
+                y_batch = torch.from_numpy(y_batch)
 
                 if self.cfg.CUDA:
                     X_batch = X_batch.float().cuda()
-                    y_batch = torch.from_numpy(y_batch).float().cuda()
-                    X_batch_tensor = Variable(X_batch, requires_grad=True)
-                    y_batch_tensor = Variable(y_batch)
-                else:
-                    X_batch_tensor = Variable(X_batch, requires_grad=True)
-                    y_batch_tensor = Variable(torch.from_numpy(y_batch))
+                    y_batch = y_batch.float().cuda()
 
                 # real_seq_len = seq_lengths.copy()
                 # seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
                 # output_scores = self.RNet(X_batch_tensor)
                 if self.cfg.LSTM.FLAG:
-                    pack = pack_padded_sequence(X_batch_tensor, seq_lengths,
+                    pack = pack_padded_sequence(X_batch, seq_lengths,
                                                 batch_first=True)
                     output_scores, _ = self.RNet(pack, len(seq_lengths), seq_lengths)
                 else:
-                    output_scores, _ = self.RNet(X_batch_tensor)
+                    output_scores, _ = self.RNet(X_batch)
                 optimizer.zero_grad()
-                loss = self.loss_func(output_scores, y_batch_tensor)
+                loss = self.loss_func(output_scores, y_batch)
                 total_loss += loss.item()
                 loss.backward()
 
@@ -245,7 +240,7 @@ class RatingModel(object):
                     self.best_val_loss = val_loss
                     self.best_val_epoch = epoch
                     # save current best
-                    save_model(self.RNet, epoch, self.best_model_dir)
+                    # save_model(self.RNet, epoch, self.best_model_dir)
                 self.val_loss_history.append(val_loss)
                 self.val_r_history.append(val_r)
             self.train_loss_history.append(total_loss)
@@ -269,7 +264,7 @@ class RatingModel(object):
         self.RNet.eval()
         batch_inds = list(BatchSampler(RandomSampler(X_val),
                                        batch_size=self.batch_size,
-                                       drop_last=True))
+                                       drop_last=False))
         total_val_loss = 0
         y_preds_lst = []
         val_inds = []
@@ -284,25 +279,21 @@ class RatingModel(object):
                 seq_lengths.sort(reverse=True)
                 X_batch = X_batch[sort_idx]
                 y_batch = y_batch[sort_idx]
+                y_batch = torch.from_numpy(y_batch)
 
                 if self.cfg.CUDA:
                     X_batch = X_batch.float().cuda()
-                    y_batch = torch.from_numpy(y_batch).float().cuda()
-                    X_batch_tensor = Variable(X_batch, requires_grad=True)
-                    y_batch_tensor = Variable(y_batch)
-                else:
-                    X_batch_tensor = Variable(X_batch, requires_grad=True)
-                    y_batch_tensor = Variable(torch.from_numpy(y_batch))
+                    y_batch = y_batch.float().cuda()
 
                 if self.cfg.LSTM.FLAG:
-                    pack = pack_padded_sequence(X_batch_tensor, seq_lengths,
+                    pack = pack_padded_sequence(X_batch, seq_lengths,
                                                 batch_first=True)
                     output_scores, _ = self.RNet(pack, len(seq_lengths),
                                                  seq_lengths)
                 else:
-                    output_scores, _ = self.RNet(X_batch_tensor)
+                    output_scores, _ = self.RNet(X_batch)
 
-                loss = self.loss_func(output_scores, y_batch_tensor)
+                loss = self.loss_func(output_scores, y_batch)
                 total_val_loss += loss.item()
 
                 output_scores = output_scores.data.tolist()
@@ -358,8 +349,7 @@ class RatingModel(object):
             X_batch = X_batch[:, :seq_lengths[0], :]
 
             if self.cfg.CUDA:
-                X_batch = X_batch.cuda()
-            X_batch = Variable(X_batch)
+                X_batch = X_batch.float().cuda()
 
             if self.cfg.LSTM.FLAG:
                 pack = pack_padded_sequence(X_batch, seq_lengths, batch_first=True)
@@ -446,6 +436,7 @@ def get_sentence_glove(s, LSTM=False, not_contextual=True, seq_len=30):
         expected_embedding_padded, sl = context_padded(all_embs, seq_len)
     else:
         expected_embedding_padded, sl = padded(all_embs, seq_len)
+    assert sl <= seq_len
     expected_embedding_tensor = torch.from_numpy(expected_embedding_padded)
     return expected_embedding_tensor, sl
 
@@ -553,6 +544,7 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM
             expected_embedding_padded, sl = padded(expected_embedding, seq_len)
         else:
             expected_embedding_padded, sl = context_padded(expected_embedding, seq_len)
+        assert sl <= seq_len
     expected_embedding_tensor = torch.from_numpy(expected_embedding_padded)
     # expected_embedding_tensor = torch.from_numpy(expected_embedding)
     return expected_embedding_tensor, sl
@@ -565,8 +557,9 @@ def get_sentence_bert(s, bc, LSTM=False, max_seq_len=None, is_single=True):
     # bc.encode() will return a ndarray
     bert_output = bc.encode([tokens], is_tokenized=True)[0]  # (1, max_seq_len, 768)
     bert_output = bert_output.squeeze()  # (max_seq_len, 768)
-    sl = len(tokens)+2
+    sl = len(tokens) + 2
     if LSTM:
+        assert sl <= max_seq_len
         return torch.from_numpy(bert_output), sl
     else:
         bert_mean = np.mean(bert_output, axis=0)
@@ -584,6 +577,7 @@ def get_sentence_bert_context(s, c, bc, LSTM=False, max_sentence_len=None, max_c
     bert_output = bert_output.squeeze()
     bert_output = bert_output[:max_sentence_len, :]
     if LSTM:
+        assert sl <= max_sentence_len
         return torch.from_numpy(bert_output), sl
     else:
         bert_mean = np.mean(bert_output, axis=0)
