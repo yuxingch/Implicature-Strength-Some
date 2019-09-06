@@ -553,13 +553,17 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM
 # BERT
 def get_sentence_bert(s, bc, LSTM=False, max_seq_len=None, is_single=True):
     # first tokenize the sentence
-    tokens = tokenizer(s, pad_symbol=False, seq_len=max_seq_len, from_right=is_single)
+    # tokens = tokenizer(s, pad_symbol=False, seq_len=max_seq_len, from_right=is_single)
     # bc.encode() will return a ndarray
-    bert_output = bc.encode([tokens], is_tokenized=True)[0]  # (1, max_seq_len, 768)
+    # bert_output = bc.encode([tokens], is_tokenized=True)[0]  # (1, max_seq_len, 768)
+    bert_output = bc.encode([s])[0]
     bert_output = bert_output.squeeze()  # (max_seq_len, 768)
-    sl = len(tokens) + 2
+    # sl = len(tokens) + 2
+    sl = max_seq_len
+    if np.where(bert_output==0)[0].shape[0]:
+        sl = np.where(bert_output==0)[0][0] + 1
+    assert sl <= max_seq_len
     if LSTM:
-        assert sl <= max_seq_len
         return torch.from_numpy(bert_output), sl
     else:
         bert_mean = np.mean(bert_output, axis=0)
@@ -567,17 +571,20 @@ def get_sentence_bert(s, bc, LSTM=False, max_seq_len=None, is_single=True):
 
 
 def get_sentence_bert_context(s, c, bc, LSTM=False, max_sentence_len=None, max_context_len=None):
-    tokens = tokenizer(s, pad_symbol=False, seq_len=max_sentence_len, from_right=True)
-    new_s = " ".join(tokens)
-    sl = len(tokens)+2
-    tokens = tokenizer(c, pad_symbol=False, seq_len=max_context_len, from_right=False)
-    new_c = " ".join(tokens)
-    bert_input = new_s + " ||| " + new_c
+    # tokens = tokenizer(s, pad_symbol=False, seq_len=max_sentence_len, from_right=True)
+    # new_s = " ".join(tokens)
+    # sl = len(tokens)+2
+    # tokens = tokenizer(c, pad_symbol=False, seq_len=max_context_len, from_right=False)
+    # new_c = " ".join(tokens)
+    bert_input = s + " ||| " + c
     bert_output = bc.encode([bert_input])
     bert_output = bert_output.squeeze()
     bert_output = bert_output[:max_sentence_len, :]
+    sl = max_seq_len
+    if np.where(bert_output==0)[0].shape[0]:
+        sl = np.where(bert_output==0)[0][0] + 1
+    assert sl <= max_sentence_len
     if LSTM:
-        assert sl <= max_sentence_len
         return torch.from_numpy(bert_output), sl
     else:
         bert_mean = np.mean(bert_output, axis=0)
