@@ -1,6 +1,6 @@
 SOME_DATABASE: './some_database.csv'
-CONFIG_NAME: 'bert_lstm_attn'
-EXPERIMENT_NAME: 'bert_lstm_attn'
+CONFIG_NAME: 'bert_lstm'
+EXPERIMENT_NAME: 'bert_lstm'
 PREDON: 'train'
 SINGLE_SENTENCE: True
 CUDA: True
@@ -11,7 +11,7 @@ IS_BERT: True
 TRAIN:
     LR: 0.02
     TOTAL_EPOCH: 100
-    LR_DECAY_EPOCH: 5
+    LR_DECAY_EPOCH: 10
     LR_DECAY_RATE: 0.8
     INTERVAL: 10
     START_EPOCH: 0
@@ -24,5 +24,5 @@ LSTM:
     SEQ_LEN: 30
     HIDDEN_DIM: 512
     LAYERS: 2
-    DROP_PROB: 0.2
-    ATTN: True
+    DROP_PROB: 0.3
+    ATTN: False

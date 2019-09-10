@@ -1,23 +1,23 @@
 SOME_DATABASE: './some_database.csv'
-CONFIG_NAME: 'bert_lstm_attn'
-EXPERIMENT_NAME: 'bert_lstm_attn'
+CONFIG_NAME: 'bert_lstm_attn_context'
+EXPERIMENT_NAME: 'bert_lstm_attn_context'
 PREDON: 'train'
-SINGLE_SENTENCE: True
+SINGLE_SENTENCE: False
 CUDA: True
 IS_ELMO: False
 IS_BERT: True
 
 
 TRAIN:
-    LR: 0.02
+    LR: 0.03
     TOTAL_EPOCH: 100
     LR_DECAY_EPOCH: 5
     LR_DECAY_RATE: 0.8
     INTERVAL: 10
     START_EPOCH: 0
     DROPOUT:
-        FC_1: 0.2
-        FC_2: 0.2
+        FC_1: 0.15
+        FC_2: 0.15
 
 LSTM:
     FLAG: True

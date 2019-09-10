@@ -1,15 +1,15 @@
 SOME_DATABASE: './some_database.csv'
-CONFIG_NAME: 'bert_lstm_attn'
-EXPERIMENT_NAME: 'bert_lstm_attn'
-PREDON: 'train'
-SINGLE_SENTENCE: True
-CUDA: True
+CONFIG_NAME: 'glove_lstm_attn_context'
+EXPERIMENT_NAME: 'glove_lstm_attn_context'
+SINGLE_SENTENCE: False
 IS_ELMO: False
-IS_BERT: True
+IS_BERT: False
+CUDA: True
+PREDON: 'train'
 
 
 TRAIN:
-    LR: 0.02
+    LR: 0.018
     TOTAL_EPOCH: 100
     LR_DECAY_EPOCH: 5
     LR_DECAY_RATE: 0.8
@@ -21,8 +21,8 @@ TRAIN:
 
 LSTM:
     FLAG: True
-    SEQ_LEN: 30
-    HIDDEN_DIM: 512
+    SEQ_LEN: 150
+    HIDDEN_DIM: 64
     LAYERS: 2
-    DROP_PROB: 0.2
+    DROP_PROB: 0.3
     ATTN: True
