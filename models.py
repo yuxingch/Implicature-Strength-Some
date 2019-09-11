@@ -27,7 +27,7 @@ from utils import mkdir_p, weights_init, save_model
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.INFO)
 
 OPTION_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
               "2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
@@ -127,7 +127,8 @@ class RatingModel(object):
                                        self.cfg.LSTM.LAYERS,
                                        self.drop_prob, self.dropout,
                                        self.cfg.LSTM.BIDIRECTION,
-                                       self.cfg.CUDA)
+                                       self.cfg.CUDA,
+                                       self.cfg.LSTM.ATTN_HEADS)
             else:
                 self.RNet = BiLSTM(vec_dim, self.cfg.LSTM.SEQ_LEN,
                                    self.cfg.LSTM.HIDDEN_DIM,
@@ -305,7 +306,6 @@ class RatingModel(object):
                     cnt += 1
                 for curr_score in temp_rating:
                     y_preds_lst.append(curr_score*6 + 1)
-        val_inds = list(set(val_inds))
         y_val = y_val[val_inds]
         val_coeff = np.corrcoef(np.array(y_preds_lst), np.array(y_val))[0, 1]
         return total_val_loss, val_coeff

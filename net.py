@@ -106,15 +106,17 @@ class BiLSTM(nn.Module):
                             dropout=self.drop_prob,
                             bidirectional=self.bidirect)
         if self.bidirect:
-            self.fc1 = fc_layer(self.hidden_dim*2, self.hidden_dim, self.dropout[0])
-            self.fc2 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[1])
+        #    self.fc1 = fc_layer(self.hidden_dim*2, self.hidden_dim, self.dropout[0])
+        #    self.fc2 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[1])
             self.get_score = nn.Sequential(
-                nn.Linear(self.hidden_dim//2, 1, bias=True))
+                nn.Linear(self.hidden_dim*2, 1, bias=True),
+                nn.Sigmoid())
         else:
-            self.fc1 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[0])
-            self.fc2 = fc_layer(self.hidden_dim//2, self.hidden_dim//4, self.dropout[1])
+        #    self.fc1 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[0])
+        #    self.fc2 = fc_layer(self.hidden_dim//2, self.hidden_dim//4, self.dropout[1])
             self.get_score = nn.Sequential(
-                nn.Linear(self.hidden_dim//4, 1, bias=True))
+                nn.Linear(self.hidden_dim, 1, bias=True),
+                nn.Sigmoid())
 
     def forward(self, x, batch_size, seq_lens):
         """
@@ -124,7 +126,7 @@ class BiLSTM(nn.Module):
 
         output - Tensor shape (curr_batch_size, 1)
         """
-        assert x.shape[0] == batch_size
+#        assert x.shape[0] == batch_size
         if self.bidirect:
             h0 = torch.randn(self.num_layers*2, batch_size, self.hidden_dim)
             c0 = torch.randn(self.num_layers*2, batch_size, self.hidden_dim)
@@ -149,8 +151,8 @@ class BiLSTM(nn.Module):
             mask = mask.cuda()
         x = x * mask  # (batch_size, hidden_dim, max_seq_len)
         x = x.sum(dim=2)  # (batch_size, hidden_dim)
-        x = self.fc1(x)
-        x = self.fc2(x)
+        #x = self.fc1(x)
+        #x = self.fc2(x)
         return self.get_score(x), None
 
 
@@ -163,7 +165,7 @@ class BiLSTMAttn(nn.Module):
     Then, the hidden states will be fed into a fully connected layer to get
     a downward projection, which will be the input of the prediction layer.
     """
-    def __init__(self, vec_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout, bidirection, is_gpu, batch_size=32):
+    def __init__(self, vec_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout, bidirection, is_gpu, attn_heads, batch_size=32):
         super(BiLSTMAttn, self).__init__()
         self.vec_dim = vec_dim
         self.seq_len = seq_len
@@ -174,6 +176,7 @@ class BiLSTMAttn(nn.Module):
         self.bidirect = bidirection
         self.batch_size = batch_size
         self.is_gpu = is_gpu
+        self.attn_heads = attn_heads
         self.define_module()
 
     def define_module(self):
@@ -184,16 +187,19 @@ class BiLSTMAttn(nn.Module):
                             dropout=self.drop_prob,
                             bidirectional=self.bidirect)
         if self.bidirect:
-            self.attention = MultiHeadAttention(self.hidden_dim*2, 8, self.is_gpu)
-            self.fc1 = fc_layer(self.hidden_dim*2, self.hidden_dim, self.dropout[0])
-            self.fc2 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[1])
+            self.attention = Attention(self.hidden_dim*2, self.attn_heads, self.is_gpu)
+            #self.fc1 = fc_layer(self.hidden_dim*2, self.hidden_dim, self.dropout[0])
+            #self.fc2 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[1])
             self.get_score = nn.Sequential(
-                nn.Linear(self.hidden_dim//2, 1, bias=True))
+                nn.Linear(self.hidden_dim*2, 1, bias=True),
+                nn.Sigmoid())
         else:
-            self.fc1 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[0])
-            self.fc2 = fc_layer(self.hidden_dim//2, self.hidden_dim//4, self.dropout[1])
+            self.attention = Attention(self.hidden_dim, self.attn_heads, self.is_gpu)
+            #self.fc1 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[0])
+            #self.fc2 = fc_layer(self.hidden_dim//2, self.hidden_dim//4, self.dropout[1])
             self.get_score = nn.Sequential(
-                nn.Linear(self.hidden_dim//4, 1, bias=True))
+                nn.Linear(self.hidden_dim, 1, bias=True),
+                nn.Sigmoid())
 
     def forward(self, x, batch_size, seq_lens):
         """
@@ -219,9 +225,30 @@ class BiLSTMAttn(nn.Module):
         else:
             x = x.reshape(batch_size, seq_lens[0], self.hidden_dim)
         x, attn_weights = self.attention(x, seq_lens)
-        x = self.fc1(x)
-        x = self.fc2(x)
+        #x = self.fc1(x)
+        #x = self.fc2(x)
         return self.get_score(x), attn_weights
+
+class Attention(nn.Module):
+
+    def __init__(self, hidden_dim, h, is_gpu=False):
+        super(Attention, self).__init__()
+        assert (h == 1)
+        self.attention1 = nn.Linear(hidden_dim, 50)
+        self.attention2 = nn.Linear(50, 1)
+
+    def forward(self, lstm_out, seq_lens):
+        
+        attention1 = torch.tanh(self.attention1(lstm_out)) # B x max_seq_len x 50
+        attention2 = torch.softmax(self.attention2(attention1), dim=1) # B x max_seq_len x 1
+        
+        # (B x max_seq_len) x (max_seq_len x B) 
+        #attention2 = torch.transpose(attention2, 0, 1) 
+        #transformed_att2 = torch.transpose(attention2.view(max_seq_len, -1), 0, 1)
+        # matrix multiplication of second attention layer and lstm_out
+        dot_product = torch.sum(torch.mul(lstm_out, attention2), dim=1)
+
+        return dot_product, None
 
 
 class MultiHeadAttention(nn.Module):

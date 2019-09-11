@@ -24,7 +24,6 @@ from split_dataset import split_train_test, k_folds_idx
 from utils import mkdir_p
 
 
-logging.basicConfig(level=logging.INFO)
 
 cfg = edict()
 cfg.SOME_DATABASE = './some_database.csv'
@@ -36,6 +35,7 @@ cfg.PREDICTION_TYPE = 'rating'
 cfg.IS_RANDOM = False
 cfg.SINGLE_SENTENCE = True
 cfg.EXPERIMENT_NAME = ''
+cfg.OUT_PATH = './'
 cfg.GLOVE_DIM = 100
 cfg.IS_ELMO = True
 cfg.IS_BERT = False
@@ -56,6 +56,7 @@ cfg.LSTM.DROP_PROB = 0.2
 cfg.LSTM.LAYERS = 2
 cfg.LSTM.BIDIRECTION = True
 cfg.LSTM.ATTN = False
+cfg.LSTM.ATTN_HEADS = 1
 
 # Training options
 cfg.TRAIN = edict()
@@ -139,6 +140,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Run ...')
     parser.add_argument('--conf', dest='config_file', default="unspecified")
+    parser.add_argument('--out_path', dest='out_path', default=None)
     opt = parser.parse_args()
     print(opt)
 
@@ -146,8 +148,12 @@ def main():
         cfg_setup(opt.config_file)
         if not cfg.MODE == 'train':
             cfg.TRAIN.FLAG = False
+        if opt.out_path is not None:
+            cfg.OUT_PATH = opt.out_path
     else:
         print("Using default settings.")
+
+    logging.basicConfig(level=logging.INFO) 
 
     # random seed
     random.seed(cfg.SEED)
@@ -158,11 +164,11 @@ def main():
     curr_path = "./datasets/seed_" + str(cfg.SEED)
     if cfg.EXPERIMENT_NAME == "":
         cfg.EXPERIMENT_NAME = datetime.now().strftime('%m_%d_%H_%M')
-    log_path = os.path.join(cfg.EXPERIMENT_NAME, "Logging")
+    log_path = os.path.join(cfg.OUT_PATH, cfg.EXPERIMENT_NAME, "Logging")
     mkdir_p(log_path)
     file_handler = logging.FileHandler(os.path.join(log_path, cfg.MODE + "_log.txt"))
     logging.getLogger().addHandler(file_handler)
-
+    logging.getLogger().setLevel(logging.INFO)
     logging.info('Using configurations:')
     logging.info(pprint.pformat(cfg))
     logging.info(f'Using random seed {cfg.SEED}.')
@@ -282,7 +288,7 @@ def main():
 
     if cfg.TRAIN.FLAG:
         logging.info("Start training\n===============================")
-        save_path = "./" + cfg.EXPERIMENT_NAME
+        save_path = cfg.OUT_PATH + cfg.EXPERIMENT_NAME
         if cfg.IS_RANDOM:
             save_path += "_random"
             r_model = RatingModel(cfg, save_path)

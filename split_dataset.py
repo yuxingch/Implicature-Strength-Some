@@ -8,7 +8,7 @@ from sklearn.model_selection import KFold
 
 from utils import mkdir_p
 
-logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.INFO)
 
 
 def split_train_test(seed_num, save_path, input='./some_fulldataset.csv'):
