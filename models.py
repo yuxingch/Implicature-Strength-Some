@@ -127,8 +127,7 @@ class RatingModel(object):
                                        self.cfg.LSTM.LAYERS,
                                        self.drop_prob, self.dropout,
                                        self.cfg.LSTM.BIDIRECTION,
-                                       self.cfg.CUDA,
-                                       self.cfg.LSTM.ATTN_HEADS)
+                                       self.cfg.CUDA)
             else:
                 self.RNet = BiLSTM(vec_dim, self.cfg.LSTM.SEQ_LEN,
                                    self.cfg.LSTM.HIDDEN_DIM,
@@ -557,6 +556,7 @@ def get_sentence_bert(s, bc, LSTM=False, max_seq_len=None, is_single=True):
     # bc.encode() will return a ndarray
     # bert_output = bc.encode([tokens], is_tokenized=True)[0]  # (1, max_seq_len, 768)
     bert_output = bc.encode([s])[0]
+    bert_output = bert_output[:max_sentence_len, :]
     bert_output = bert_output.squeeze()  # (max_seq_len, 768)
     # sl = len(tokens) + 2
     sl = max_seq_len

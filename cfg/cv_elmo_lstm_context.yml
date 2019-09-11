@@ -9,11 +9,11 @@ IS_BERT: False
 
 
 TRAIN:
-    LR: 0.015
+    LR: 0.001
     TOTAL_EPOCH: 100
     START_EPOCH: 0
     LR_DECAY_EPOCH: 5
-    LR_DECAY_RATE: 0.8
+    LR_DECAY_RATE: 1.0
     INTERVAL: 10
     DROPOUT:
         FC_1: 0.0

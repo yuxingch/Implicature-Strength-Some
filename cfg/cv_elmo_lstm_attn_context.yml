@@ -9,10 +9,10 @@ IS_ELMO: True
 
 
 TRAIN:
-    LR: 0.02
+    LR: 0.001
     TOTAL_EPOCH: 100
     LR_DECAY_EPOCH: 5
-    LR_DECAY_RATE: 0.8
+    LR_DECAY_RATE: 1.0
     INTERVAL: 10
     DROPOUT:
         FC_1: 0.2

@@ -56,7 +56,6 @@ cfg.LSTM.DROP_PROB = 0.2
 cfg.LSTM.LAYERS = 2
 cfg.LSTM.BIDIRECTION = True
 cfg.LSTM.ATTN = False
-cfg.LSTM.ATTN_HEADS = 1
 
 # Training options
 cfg.TRAIN = edict()
