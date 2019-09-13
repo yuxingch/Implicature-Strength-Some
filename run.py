@@ -234,6 +234,8 @@ def main():
         sl = len_np.tolist()
         word_embs_stack = torch.from_numpy(word_embs_np)
     else:
+        if cfg.IS_ELMO:
+            ELMO_EMBEDDER = ElmoEmbedder()
         sl = []
         for (k, v) in tqdm(target_utterances.items(), total=len(target_utterances)):
             if cfg.SINGLE_SENTENCE:
@@ -245,7 +247,7 @@ def main():
                 input_text = context_v[0] + v[0]
             if cfg.IS_ELMO:
                 from models import get_sentence_elmo
-                embedder = ElmoEmbedder()
+                embedder = ELMO_EMBEDDER
                 curr_emb, l = get_sentence_elmo(input_text, embedder=embedder,
                                                 elmo_mode=cfg.ELMO_MODE,
                                                 not_contextual=cfg.SINGLE_SENTENCE,

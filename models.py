@@ -556,7 +556,7 @@ def get_sentence_bert(s, bc, LSTM=False, max_seq_len=None, is_single=True):
     # bc.encode() will return a ndarray
     # bert_output = bc.encode([tokens], is_tokenized=True)[0]  # (1, max_seq_len, 768)
     bert_output = bc.encode([s])[0]
-    bert_output = bert_output[:max_sentence_len, :]
+    bert_output = bert_output[:max_seq_len, :]
     bert_output = bert_output.squeeze()  # (max_seq_len, 768)
     # sl = len(tokens) + 2
     sl = max_seq_len
@@ -580,7 +580,7 @@ def get_sentence_bert_context(s, c, bc, LSTM=False, max_sentence_len=None, max_c
     bert_output = bc.encode([bert_input])
     bert_output = bert_output.squeeze()
     bert_output = bert_output[:max_sentence_len, :]
-    sl = max_seq_len
+    sl = max_sentence_len
     if np.where(bert_output==0)[0].shape[0]:
         sl = np.where(bert_output==0)[0][0] + 1
     assert sl <= max_sentence_len

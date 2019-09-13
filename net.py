@@ -219,7 +219,7 @@ class BiLSTMAttn(nn.Module):
 class SelfAttention(nn.Module):
 
     def __init__(self, hidden_dim, is_gpu=False):
-        super(Attention, self).__init__()
+        super(SelfAttention, self).__init__()
         self.is_gpu = is_gpu
         self.attention1 = nn.Linear(hidden_dim, 50)
         self.attention2 = nn.Linear(50, 1)
@@ -234,7 +234,7 @@ class SelfAttention(nn.Module):
         attention_weights = attention2
         if self.is_gpu:
           attention_weights = attention_weights.cpu()
-        return dot_product, attention_weights.numpy()
+        return dot_product, attention_weights.detach().numpy()
 
 
 #class MultiHeadAttention(nn.Module):
