@@ -142,7 +142,7 @@ class BiLSTM(nn.Module):
         mask = torch.zeros(x.size())
         if self.bidirect:
           for i in range(batch_size):
-            mask[i, :self.hidden_dim, seq_lens[i]] = 1
+            mask[i, :self.hidden_dim, seq_lens[i]-1] = 1
             mask[i, self.hidden_dim:, 0] = 1
         else:
           for i in range(batch_size):
