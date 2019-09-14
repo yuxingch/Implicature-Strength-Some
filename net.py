@@ -140,9 +140,13 @@ class BiLSTM(nn.Module):
             x = x.reshape(batch_size, seq_lens[0], self.hidden_dim)
         x = x.permute(0, 2, 1)
         mask = torch.zeros(x.size())
-
-        for i in range(batch_size):
-            mask[i, :, seq_lens[i]-1] = 1
+        if self.bidirect:
+          for i in range(batch_size):
+            mask[i, :self.hidden_dim, seq_lens[i]] = 1
+            mask[i, self.hidden_dim:, 0] = 1
+        else:
+          for i in range(batch_size):
+              mask[i, :, seq_lens[i]-1] = 1
         if self.is_gpu:
             mask = mask.cuda()
         x = x * mask  # (batch_size, hidden_dim, max_seq_len)

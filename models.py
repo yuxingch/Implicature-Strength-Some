@@ -7,13 +7,10 @@ import sys
 import time
 
 from allennlp.commands.elmo import ElmoEmbedder
-# from allennlp.modules.elmo import Elmo, batch_to_ids
-# from bert_serving.client import BertClient
 from easydict import EasyDict as edict
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import numpy as np
-import tensorflow as tf
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
@@ -36,6 +33,7 @@ WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
 
 BERT_DIM = 768
 GLOVE_DIM = 100
+ELMO_DIM = 1024
 glove = vocab.GloVe(name='6B', dim=GLOVE_DIM)
 
 IMG_DIR = "/Users/yuxing/Desktop/Stanford/Academic/2018-2019/Spring2019/temp/"
@@ -53,11 +51,12 @@ def build_state_dict(config_net):
     return torch.load(config_net, map_location=lambda storage, loc: storage)['state_dict']
 
 
-def write_summary(value, tag, summary_writer, global_step):
-    """Write a single summary value to tensorboard"""
-    summary = tf.Summary()
-    summary.value.add(tag=tag, simple_value=value)
-    summary_writer.add_summary(summary, global_step)
+# get rid of tensorflow dependency
+#def write_summary(value, tag, summary_writer, global_step):
+#    """Write a single summary value to tensorboard"""
+#    summary = tf.Summary()
+#    summary.value.add(tag=tag, simple_value=value)
+#    summary_writer.add_summary(summary, global_step)
 
 
 class RatingModel(object):
@@ -77,7 +76,7 @@ class RatingModel(object):
             mkdir_p(self.model_dir)
             mkdir_p(self.best_model_dir)
             mkdir_p(self.log_dir)
-            self.summary_writer = tf.summary.FileWriter(self.log_dir)
+            #self.summary_writer = tf.summary.FileWriter(self.log_dir)
 
         self.batch_size = self.cfg.TRAIN.BATCH_SIZE
         self.total_epoch = self.cfg.TRAIN.TOTAL_EPOCH
@@ -114,10 +113,7 @@ class RatingModel(object):
         self.RNet = None
         vec_dim = GLOVE_DIM
         if self.cfg.IS_ELMO:
-            if self.cfg.ELMO_MODE == 'concat':
-                vec_dim = 3072
-            else:
-                vec_dim = 1024
+            vec_dim = ELMO_DIM
         elif self.cfg.IS_BERT:
             vec_dim = BERT_DIM
         if self.cfg.LSTM.FLAG:
@@ -198,13 +194,13 @@ class RatingModel(object):
 
                 sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
                 seq_lengths.sort(reverse=True)
-                X_batch = X_batch[sort_idx]
+                X_batch = X_batch[sort_idx].float()
                 y_batch = y_batch[sort_idx]
-                y_batch = torch.from_numpy(y_batch)
+                y_batch = torch.from_numpy(y_batch).float()
 
                 if self.cfg.CUDA:
-                    X_batch = X_batch.float().cuda()
-                    y_batch = y_batch.float().cuda()
+                    X_batch = X_batch.cuda()
+                    y_batch = y_batch.cuda()
 
                 # real_seq_len = seq_lengths.copy()
                 # seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
@@ -250,13 +246,13 @@ class RatingModel(object):
                          f' val r: {val_r:.4f}; time: {(end_t-start_t):.2f}sec')
 
             if epoch % self.interval == 0 or epoch == 1:
-                for (a, b) in count_loss:
-                    write_summary(b, 'loss', self.summary_writer, a)
+                #for (a, b) in count_loss:
+                #    write_summary(b, 'loss', self.summary_writer, a)
                 count_loss = []
                 save_model(self.RNet, epoch, self.model_dir)
         # save checkpoint for the last epoch
-        for (a, b) in count_loss:
-            write_summary(b, 'loss', self.summary_writer, a)
+        #for (a, b) in count_loss:
+        #    write_summary(b, 'loss', self.summary_writer, a)
         save_model(self.RNet, self.total_epoch, self.model_dir)
         logging.info(f'Best epoch {self.best_val_epoch} with val_r = {self.best_val_r:.4f}.')
 
@@ -277,13 +273,13 @@ class RatingModel(object):
 
                 sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
                 seq_lengths.sort(reverse=True)
-                X_batch = X_batch[sort_idx]
+                X_batch = X_batch[sort_idx].float()
                 y_batch = y_batch[sort_idx]
-                y_batch = torch.from_numpy(y_batch)
+                y_batch = torch.from_numpy(y_batch).float()
 
                 if self.cfg.CUDA:
-                    X_batch = X_batch.float().cuda()
-                    y_batch = y_batch.float().cuda()
+                    X_batch = X_batch.cuda()
+                    y_batch = y_batch.cuda()
 
                 if self.cfg.LSTM.FLAG:
                     pack = pack_padded_sequence(X_batch, seq_lengths,
@@ -486,7 +482,7 @@ def tokenizer(s, pad_symbol=True, seq_len=None, from_right=True):
     modified_s = re.sub('#', '.', s).strip('.').split('.')
     modified_s = list(filter(None, modified_s))
     if pad_symbol:
-        raw_tokens = ['<bos>']
+        raw_tokens = ['<S>']
     else:
         raw_tokens = []
     for s in modified_s:
@@ -505,7 +501,7 @@ def tokenizer(s, pad_symbol=True, seq_len=None, from_right=True):
         s = s.replace('mumblex', 'mumble')
         raw_tokens += split_by_whitespace(s)
     if pad_symbol:
-        raw_tokens.append('<eos>')
+        raw_tokens.append('</S>')
     total_len = len(raw_tokens)
     if seq_len and seq_len-2 < total_len:
         seq_len -= 2
@@ -518,26 +514,22 @@ def tokenizer(s, pad_symbol=True, seq_len=None, from_right=True):
 
 
 # Elmo
-def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM=False, seq_len=None):
+def get_sentence_elmo(s, c, embedder, layer=2, not_contextual=True, LSTM=False, seq_len=None):
     """Get ELMo vector representation for each sentence"""
+
+    if not not_contextual:
+      s = s + " </S> <S> " + c
     if not LSTM:
         raw_tokens = tokenizer(s, pad_symbol=False)
         expected_embedding = embedder.embed_sentence(raw_tokens)
         sl = seq_len
         expected_embedding = np.mean(expected_embedding, axis=1)    # averaging on # of words
-        if elmo_mode == 'concat':
-            expected_embedding = np.concatenate(expected_embedding)
-        elif elmo_mode == 'avg':
-            expected_embedding = np.mean(expected_embedding, axis=0)
+        expected_embedding = expected_embedding[layer, :].squeeze()
     else:
         raw_tokens = tokenizer(s)
         expected_embedding = embedder.embed_sentence(raw_tokens)  # [3, actual_sentence_len+2, 1024]
         sentence_len = expected_embedding.shape[1]
-        if elmo_mode == 'concat':
-            # [seq_len, 3024]
-            expected_embedding = np.concatenate(expected_embedding, axis=1)
-        elif elmo_mode == 'avg':
-            expected_embedding = np.mean(expected_embedding, axis=0)
+        expected_embedding = expected_embedding[layer, :, :].squeeze()
         # chop/pad
         if not_contextual:
             expected_embedding_padded, sl = padded(expected_embedding, seq_len)
@@ -548,9 +540,71 @@ def get_sentence_elmo(s, embedder, elmo_mode='concat', not_contextual=True, LSTM
     # expected_embedding_tensor = torch.from_numpy(expected_embedding)
     return expected_embedding_tensor, sl
 
+# BERT from huggingface models
+def get_sentence_bert(s, bert_tokenizer, bert_model, layer = 11, GPU=False, LSTM=False, max_seq_len=None, is_single=True):
+    s = "[CLS] " + s + " [SEP]" 
+    tokenized_text = bert_tokenizer.tokenize(s)
+    indexed_tokens = bert_tokenizer.convert_tokens_to_ids(tokenized_text)
+    segments_ids = [0] * len(indexed_tokens)
+    tokens_tensor = torch.tensor([indexed_tokens])
+    segments_tensors = torch.tensor([segments_ids])
+    bert_output = torch.zeros((1,max_seq_len, 768))
+    if GPU:
+      tokens_tensor = tokens_tensor.cuda()
+      segments_tensors = tokens_tensor.cuda()
+      bert_output = bert_output.cuda()
+      
+    sl = min(len(indexed_tokens), max_seq_len)
+
+    with torch.no_grad():
+        outputs = bert_model(tokens_tensor, token_type_ids=segments_tensors)
+        bert_output[:, :sl, :] = outputs[2][layer][:,:sl, :]
+        bert_output = bert_output.squeeze()  # (max_seq_len, 768)
+
+    if GPU:
+      bert_output = bert_output.cpu()
+
+    if LSTM:
+        return bert_output, sl
+    else:
+        bert_mean = torch.mean(bert_output, axis=0)
+        return bert_mean, sl
+
+def get_sentence_bert_context(s, c, bc, bert_tokenizer, bert_model, layer = 11,
+                              GPU=False, LSTM=False, max_sentence_len=None, 
+                              max_context_len=None):
+    s = "[CLS]" + s + " [SEP] " + c + " [SEP]" 
+    tokenized_text = bert_tokenizer.tokenize(s)
+    indexed_tokens = bert_tokenizer.convert_tokens_to_ids(tokenized_text)
+    s_len = tokenized_text.index("[SEP]")
+    segments_ids = [0] * (s_len + 1) + [1] * (len(tokenized_text) - s_len - 1)
+    
+    tokens_tensor = torch.tensor([indexed_tokens])
+    segments_tensors = torch.tensor([segments_ids])
+    bert_output = torch.zeros((1,max_seq_len, 768))
+    if GPU:
+      tokens_tensor = tokens_tensor.cuda()
+      segments_tensors = tokens_tensor.cuda()
+      bert_output = bert_output.cuda()
+      
+    sl = min(s_len, max_seq_len)
+
+    with torch.no_grad():
+        outputs = bert_model(tokens_tensor, token_type_ids=segments_tensors)
+        bert_output[:, :sl, :] = outputs[2][layer][:,:sl, :]
+        bert_output = bert_output.squeeze()  # (max_seq_len, 768)
+
+    if GPU:
+      bert_output = bert_output.cpu()
+
+    if LSTM:
+        return bert_output, sl
+    else:
+        bert_mean = torch.mean(bert_output, axis=0)
+        return bert_mean, sl
 
 # BERT
-def get_sentence_bert(s, bc, LSTM=False, max_seq_len=None, is_single=True):
+def get_sentence_bert_service(s, bc, LSTM=False, max_seq_len=None, is_single=True):
     # first tokenize the sentence
     # tokens = tokenizer(s, pad_symbol=False, seq_len=max_seq_len, from_right=is_single)
     # bc.encode() will return a ndarray
@@ -570,12 +624,7 @@ def get_sentence_bert(s, bc, LSTM=False, max_seq_len=None, is_single=True):
         return torch.from_numpy(bert_mean), sl
 
 
-def get_sentence_bert_context(s, c, bc, LSTM=False, max_sentence_len=None, max_context_len=None):
-    # tokens = tokenizer(s, pad_symbol=False, seq_len=max_sentence_len, from_right=True)
-    # new_s = " ".join(tokens)
-    # sl = len(tokens)+2
-    # tokens = tokenizer(c, pad_symbol=False, seq_len=max_context_len, from_right=False)
-    # new_c = " ".join(tokens)
+def get_sentence_bert_context_service(s, c, bc, LSTM=False, max_sentence_len=None, max_context_len=None):
     bert_input = s + " ||| " + c
     bert_output = bc.encode([bert_input])
     bert_output = bert_output.squeeze()

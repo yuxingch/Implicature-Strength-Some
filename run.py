@@ -39,6 +39,8 @@ cfg.OUT_PATH = './'
 cfg.GLOVE_DIM = 100
 cfg.IS_ELMO = True
 cfg.IS_BERT = False
+cfg.ELMO_LAYER = 2
+cfg.BERT_LAYER = 11
 cfg.ELMO_MODE = 'concat'
 cfg.SAVE_PREDS = False
 cfg.BATCH_ITEM_NUM = 30
@@ -212,9 +214,9 @@ def main():
         NUMPY_DIR += '_contextual'
     # type of pre-trained word embedding
     if cfg.IS_ELMO:
-        NUMPY_DIR += '/elmo_' + cfg.ELMO_MODE
+        NUMPY_DIR += '/elmo_' + "layer_" + str(cfg.ELMO_LAYER)
     elif cfg.IS_BERT:
-        NUMPY_DIR += '/bert'
+        NUMPY_DIR += '/bert' + "layer_" + str(cfg.BERT_LAYER)
     else:  # default: GloVe
         NUMPY_DIR += '/glove'
     # Avg/LSTM
@@ -236,34 +238,49 @@ def main():
     else:
         if cfg.IS_ELMO:
             ELMO_EMBEDDER = ElmoEmbedder()
+        if cfg.IS_BERT: 
+            from pytorch_transformers import BertTokenizer, BertModel
+            bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+            bert_model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
+            bert_model.eval()
+            if cfg.CUDA:
+              bert_model.to('cuda')
         sl = []
         for (k, v) in tqdm(target_utterances.items(), total=len(target_utterances)):
+            context_v = contexts[k]
             if cfg.SINGLE_SENTENCE:
                 # only including the target utterance
                 input_text = v[0]
             else:
                 # discourse context + target utterance
-                context_v = contexts[k]
                 input_text = context_v[0] + v[0]
             if cfg.IS_ELMO:
                 from models import get_sentence_elmo
                 embedder = ELMO_EMBEDDER
-                curr_emb, l = get_sentence_elmo(input_text, embedder=embedder,
-                                                elmo_mode=cfg.ELMO_MODE,
+                curr_emb, l = get_sentence_elmo(v[0], context_v[0], embedder=embedder,
+                                                layer=cfg.ELMO_LAYER,
                                                 not_contextual=cfg.SINGLE_SENTENCE,
                                                 LSTM=cfg.LSTM.FLAG,
                                                 seq_len=cfg.LSTM.SEQ_LEN)
             elif cfg.IS_BERT:
-                from bert_serving.client import BertClient
-                bc = BertClient()
                 if cfg.SINGLE_SENTENCE:
                     from models import get_sentence_bert
-                    curr_emb, l = get_sentence_bert(input_text, bc, LSTM=cfg.LSTM.FLAG,
+                    curr_emb, l = get_sentence_bert(input_text, 
+                                                    bert_tokenizer,
+                                                    bert_model,
+                                                    layer=cfg.BERT_LAYER,
+                                                    GPU=cfg.CUDA,
+                                                    LSTM=cfg.LSTM.FLAG,
                                                     max_seq_len=cfg.LSTM.SEQ_LEN,
                                                     is_single=cfg.SINGLE_SENTENCE)
                 else:
                     from models import get_sentence_bert_context
-                    curr_emb, l = get_sentence_bert_context(v[0], context_v[0], bc,
+                    curr_emb, l = get_sentence_bert_context(v[0], 
+                                                            context_v[0], 
+                                                            bert_tokenizer,
+                                                            bert_model,
+                                                            layer=cfg.BERT_LAYER,
+                                                            GPU=cfg.CUDA,
                                                             LSTM=cfg.LSTM.FLAG,
                                                             max_sentence_len=30,
                                                             max_context_len=120)
