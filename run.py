@@ -41,6 +41,7 @@ cfg.IS_ELMO = True
 cfg.IS_BERT = False
 cfg.ELMO_LAYER = 2
 cfg.BERT_LAYER = 11
+cfg.BERT_LARGE = False
 cfg.ELMO_MODE = 'concat'
 cfg.SAVE_PREDS = False
 cfg.BATCH_ITEM_NUM = 30
@@ -216,7 +217,10 @@ def main():
     if cfg.IS_ELMO:
         NUMPY_DIR += '/elmo_' + "layer_" + str(cfg.ELMO_LAYER)
     elif cfg.IS_BERT:
-        NUMPY_DIR += '/bert' + "layer_" + str(cfg.BERT_LAYER)
+        NUMPY_DIR += '/bert_'
+        if cfg.BERT_LARGE:
+          NUMPY_DIR += "large"
+        NUMPY_DIR += "layer_" + str(cfg.BERT_LAYER)
     else:  # default: GloVe
         NUMPY_DIR += '/glove'
     # Avg/LSTM
@@ -240,7 +244,8 @@ def main():
             ELMO_EMBEDDER = ElmoEmbedder()
         if cfg.IS_BERT: 
             from pytorch_transformers import BertTokenizer, BertModel
-            bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+            bert_model = 'bert-large-uncased' if cfg.BERT_LARGE else 'bert-base-uncased'
+            bert_tokenizer = BertTokenizer.from_pretrained(bert_model)
             bert_model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
             bert_model.eval()
             if cfg.CUDA:

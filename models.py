@@ -32,6 +32,7 @@ WEIGHT_FILE = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/" \
               "2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
 
 BERT_DIM = 768
+BERT_LARGE_DIM = 1024
 GLOVE_DIM = 100
 ELMO_DIM = 1024
 glove = vocab.GloVe(name='6B', dim=GLOVE_DIM)
@@ -115,7 +116,7 @@ class RatingModel(object):
         if self.cfg.IS_ELMO:
             vec_dim = ELMO_DIM
         elif self.cfg.IS_BERT:
-            vec_dim = BERT_DIM
+            vec_dim = BERT_LARGE_DIM if self.cfg.BERT_LARGE else BERT_DIM
         if self.cfg.LSTM.FLAG:
             if self.cfg.LSTM.ATTN:
                 self.RNet = BiLSTMAttn(vec_dim, self.cfg.LSTM.SEQ_LEN,
@@ -548,7 +549,7 @@ def get_sentence_bert(s, bert_tokenizer, bert_model, layer = 11, GPU=False, LSTM
     segments_ids = [0] * len(indexed_tokens)
     tokens_tensor = torch.tensor([indexed_tokens])
     segments_tensors = torch.tensor([segments_ids])
-    bert_output = torch.zeros((1,max_seq_len, 768))
+    bert_output = torch.zeros((1,max_seq_len, bert_model.config.hidden_size))
     if GPU:
       tokens_tensor = tokens_tensor.cuda()
       segments_tensors = tokens_tensor.cuda()
@@ -581,7 +582,7 @@ def get_sentence_bert_context(s, c, bc, bert_tokenizer, bert_model, layer = 11,
     
     tokens_tensor = torch.tensor([indexed_tokens])
     segments_tensors = torch.tensor([segments_ids])
-    bert_output = torch.zeros((1,max_seq_len, 768))
+    bert_output = torch.zeros((1,max_seq_len, bert_model.config.hidden_size))
     if GPU:
       tokens_tensor = tokens_tensor.cuda()
       segments_tensors = tokens_tensor.cuda()
