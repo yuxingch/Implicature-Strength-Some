@@ -551,7 +551,7 @@ def get_sentence_bert(s, bert_tokenizer, bert_model, layer = 11, GPU=False, LSTM
     bert_output = torch.zeros((1,max_seq_len, 768))
     if GPU:
       tokens_tensor = tokens_tensor.cuda()
-      segments_tensors = tokens_tensor.cuda()
+      segments_tensors = segments_tensors.cuda()
       bert_output = bert_output.cuda()
       
     sl = min(len(indexed_tokens), max_seq_len)

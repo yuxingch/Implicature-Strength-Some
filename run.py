@@ -244,7 +244,7 @@ def main():
             bert_model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
             bert_model.eval()
             if cfg.CUDA:
-              bert_model.to('cuda')
+              bert_model = bert_model.cuda()
         sl = []
         for (k, v) in tqdm(target_utterances.items(), total=len(target_utterances)):
             context_v = contexts[k]
