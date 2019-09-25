@@ -240,6 +240,9 @@ class RatingModel(object):
                     # save_model(self.RNet, epoch, self.best_model_dir)
                 self.val_loss_history.append(val_loss)
                 self.val_r_history.append(val_r)
+            else:
+                val_loss = 0
+                val_r = 0
             self.train_loss_history.append(total_loss)
 
             logging.info(f'[{epoch}/{self.total_epoch}][{i+1}/{len(batch_inds)}]'
@@ -327,7 +330,7 @@ class RatingModel(object):
         rating_lst = []
         count = 0
         all_hiddens_list = []
-        all_attn = np.zeros((408, 8, self.cfg.LSTM.SEQ_LEN, self.cfg.LSTM.SEQ_LEN))
+        all_attn = np.zeros((408, self.cfg.LSTM.SEQ_LEN, 1))
         diff = 0
         while count < num_items:
             iend = count + batch_size
@@ -361,12 +364,11 @@ class RatingModel(object):
             for s in sort_idx:
                 temp_rating[s] = output_scores[cnt][0]
                 if attn_weights is not None:
-                    revert_attn_weights[s, :, :, :] = attn_weights[cnt, :, :, :]
+                    revert_attn_weights[s, :, :] = attn_weights[cnt, :, :]
                 cnt += 1
             temp_rating = temp_rating[diff:]
             if attn_weights is not None:
-                revert_attn_weights = revert_attn_weights[diff:]
-                all_attn[count+diff:iend, :, :, :] = revert_attn_weights[:, :, :, :]
+                all_attn[count:iend, :, :] = revert_attn_weights[:, :, :]
             for curr_score in temp_rating:
                 rating_lst.append(curr_score*max_diff+min_value)
             count += batch_size

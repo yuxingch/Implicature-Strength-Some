@@ -246,7 +246,7 @@ def main():
             from pytorch_transformers import BertTokenizer, BertModel
             bert_model = 'bert-large-uncased' if cfg.BERT_LARGE else 'bert-base-uncased'
             bert_tokenizer = BertTokenizer.from_pretrained(bert_model)
-            bert_model = BertModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
+            bert_model = BertModel.from_pretrained(bert_model, output_hidden_states=True)
             bert_model.eval()
             if cfg.CUDA:
               bert_model = bert_model.cuda()
@@ -359,7 +359,7 @@ def main():
                 logging.info(f'Avg. validation loss: {val_loss_mean}')
                 logging.info(f'Avg. validation r: {val_r_mean}')
     else:
-        eval_path = "./" + cfg.EXPERIMENT_NAME
+        eval_path = cfg.OUT_PATH + cfg.EXPERIMENT_NAME
         epoch_lst = [0, 1]
         i = 0
         while i < cfg.TRAIN.TOTAL_EPOCH - cfg.TRAIN.INTERVAL + 1:
