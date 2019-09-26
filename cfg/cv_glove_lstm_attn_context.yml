@@ -9,10 +9,10 @@ PREDON: 'train'
 
 
 TRAIN:
-    LR: 0.018
-    TOTAL_EPOCH: 100
-    LR_DECAY_EPOCH: 5
-    LR_DECAY_RATE: 0.8
+    LR: 0.001
+    TOTAL_EPOCH: 800
+    LR_DECAY_EPOCH: 100
+    LR_DECAY_RATE: 1.0
     INTERVAL: 10
     START_EPOCH: 0
     DROPOUT:
@@ -22,7 +22,7 @@ TRAIN:
 LSTM:
     FLAG: True
     SEQ_LEN: 150
-    HIDDEN_DIM: 64
+    HIDDEN_DIM: 100
     LAYERS: 2
     DROP_PROB: 0.3
     ATTN: True
