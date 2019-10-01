@@ -343,8 +343,8 @@ class RatingModel(object):
             seq_lengths = sl[count:iend]
 
             sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
-            max_seq_len_batch = seq_lengths[0]
             seq_lengths.sort(reverse=True)
+            max_seq_len_batch = seq_lengths[0]
             X_batch = X_batch[sort_idx]
             X_batch = X_batch[:, :max_seq_len_batch, :]
 
