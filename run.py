@@ -50,6 +50,7 @@ cfg.CUDA = False
 cfg.GPU_NUM = 1
 cfg.KFOLDS = 5
 cfg.CROSS_VALIDATION_FLAG = True
+cfg.SPLIT_NAME = ""
 
 cfg.LSTM = edict()
 cfg.LSTM.FLAG = False
@@ -164,6 +165,8 @@ def main():
         torch.cuda.manual_seed_all(cfg.SEED)
 
     curr_path = "./datasets/seed_" + str(cfg.SEED)
+    if cfg.SPLIT_NAME != "":
+      curr_path = os.path.join(curr_path, cfg.SPLIT_NAME)
     if cfg.EXPERIMENT_NAME == "":
         cfg.EXPERIMENT_NAME = datetime.now().strftime('%m_%d_%H_%M')
     log_path = os.path.join(cfg.OUT_PATH, cfg.EXPERIMENT_NAME, "Logging")
@@ -209,7 +212,11 @@ def main():
     word_embs_np = None
     word_embs_stack = None
 
+
+
     NUMPY_DIR = './datasets/seed_' + str(cfg.SEED)
+    if cfg.SPLIT_NAME != "":
+      NUMPY_DIR = os.path.join(NUMPY_DIR, cfg.SPLIT_NAME)
     # is contextual or not
     if not cfg.SINGLE_SENTENCE:
         NUMPY_DIR += '_contextual'

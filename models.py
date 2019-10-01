@@ -330,7 +330,7 @@ class RatingModel(object):
         rating_lst = []
         count = 0
         all_hiddens_list = []
-        all_attn = np.zeros((408, self.cfg.LSTM.SEQ_LEN, 1))
+        all_attn = np.zeros((num_items, self.cfg.LSTM.SEQ_LEN, 1))
         diff = 0
         while count < num_items:
             iend = count + batch_size
@@ -338,14 +338,15 @@ class RatingModel(object):
                 diff = iend - num_items
                 iend = num_items
                 # break
-                count = num_items - batch_size
+                #count = num_items - batch_size
             X_batch = X[count:iend]
             seq_lengths = sl[count:iend]
 
             sort_idx = sorted(range(len(seq_lengths)), key=lambda k: seq_lengths[k], reverse=True)
             seq_lengths.sort(reverse=True)
+            max_seq_len_batch = seq_lengths[0]
             X_batch = X_batch[sort_idx]
-            X_batch = X_batch[:, :seq_lengths[0], :]
+            X_batch = X_batch[:, :max_seq_len_batch, :]
 
             if self.cfg.CUDA:
                 X_batch = X_batch.float().cuda()
@@ -366,9 +367,9 @@ class RatingModel(object):
                 if attn_weights is not None:
                     revert_attn_weights[s, :, :] = attn_weights[cnt, :, :]
                 cnt += 1
-            temp_rating = temp_rating[diff:]
+            #temp_rating = temp_rating[diff:]
             if attn_weights is not None:
-                all_attn[count:iend, :, :] = revert_attn_weights[:, :, :]
+                all_attn[count:iend, :max_seq_len_batch, :] = revert_attn_weights[:, :, :]
             for curr_score in temp_rating:
                 rating_lst.append(curr_score*max_diff+min_value)
             count += batch_size
