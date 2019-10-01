@@ -338,7 +338,7 @@ class RatingModel(object):
                 diff = iend - num_items
                 iend = num_items
                 # break
-                count = num_items - batch_size
+                #count = num_items - batch_size
             X_batch = X[count:iend]
             seq_lengths = sl[count:iend]
 
@@ -366,7 +366,7 @@ class RatingModel(object):
                 if attn_weights is not None:
                     revert_attn_weights[s, :, :] = attn_weights[cnt, :, :]
                 cnt += 1
-            temp_rating = temp_rating[diff:]
+            #temp_rating = temp_rating[diff:]
             if attn_weights is not None:
                 all_attn[count:iend, :, :] = revert_attn_weights[:, :, :]
             for curr_score in temp_rating:
