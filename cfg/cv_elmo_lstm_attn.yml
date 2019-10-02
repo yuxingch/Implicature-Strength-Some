@@ -1,11 +1,11 @@
 SOME_DATABASE: './some_database.csv'
-CONFIG_NAME: 'bert_lstm_attn'
-EXPERIMENT_NAME: 'bert_lstm_attn'
+CONFIG_NAME: 'elmo_lstm_attn'
+EXPERIMENT_NAME: 'elmo_lstm_attn'
 PREDON: 'train'
 SINGLE_SENTENCE: True
 CUDA: True
-IS_ELMO: False
-IS_BERT: True
+IS_ELMO: True
+IS_BERT: False
 
 
 TRAIN:

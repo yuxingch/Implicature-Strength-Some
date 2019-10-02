@@ -24,7 +24,6 @@ from split_dataset import split_train_test, k_folds_idx
 from utils import mkdir_p
 
 
-logging.basicConfig(level=logging.INFO)
 
 cfg = edict()
 cfg.SOME_DATABASE = './some_database.csv'
@@ -36,9 +35,13 @@ cfg.PREDICTION_TYPE = 'rating'
 cfg.IS_RANDOM = False
 cfg.SINGLE_SENTENCE = True
 cfg.EXPERIMENT_NAME = ''
+cfg.OUT_PATH = './'
 cfg.GLOVE_DIM = 100
 cfg.IS_ELMO = True
 cfg.IS_BERT = False
+cfg.ELMO_LAYER = 2
+cfg.BERT_LAYER = 11
+cfg.BERT_LARGE = False
 cfg.ELMO_MODE = 'concat'
 cfg.SAVE_PREDS = False
 cfg.BATCH_ITEM_NUM = 30
@@ -47,6 +50,7 @@ cfg.CUDA = False
 cfg.GPU_NUM = 1
 cfg.KFOLDS = 5
 cfg.CROSS_VALIDATION_FLAG = True
+cfg.SPLIT_NAME = ""
 
 cfg.LSTM = edict()
 cfg.LSTM.FLAG = False
@@ -139,6 +143,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Run ...')
     parser.add_argument('--conf', dest='config_file', default="unspecified")
+    parser.add_argument('--out_path', dest='out_path', default=None)
     opt = parser.parse_args()
     print(opt)
 
@@ -146,8 +151,12 @@ def main():
         cfg_setup(opt.config_file)
         if not cfg.MODE == 'train':
             cfg.TRAIN.FLAG = False
+        if opt.out_path is not None:
+            cfg.OUT_PATH = opt.out_path
     else:
         print("Using default settings.")
+
+    logging.basicConfig(level=logging.INFO) 
 
     # random seed
     random.seed(cfg.SEED)
@@ -156,13 +165,15 @@ def main():
         torch.cuda.manual_seed_all(cfg.SEED)
 
     curr_path = "./datasets/seed_" + str(cfg.SEED)
+    if cfg.SPLIT_NAME != "":
+      curr_path = os.path.join(curr_path, cfg.SPLIT_NAME)
     if cfg.EXPERIMENT_NAME == "":
         cfg.EXPERIMENT_NAME = datetime.now().strftime('%m_%d_%H_%M')
-    log_path = os.path.join(cfg.EXPERIMENT_NAME, "Logging")
+    log_path = os.path.join(cfg.OUT_PATH, cfg.EXPERIMENT_NAME, "Logging")
     mkdir_p(log_path)
     file_handler = logging.FileHandler(os.path.join(log_path, cfg.MODE + "_log.txt"))
     logging.getLogger().addHandler(file_handler)
-
+    logging.getLogger().setLevel(logging.INFO)
     logging.info('Using configurations:')
     logging.info(pprint.pformat(cfg))
     logging.info(f'Using random seed {cfg.SEED}.')
@@ -201,15 +212,22 @@ def main():
     word_embs_np = None
     word_embs_stack = None
 
+
+
     NUMPY_DIR = './datasets/seed_' + str(cfg.SEED)
+    if cfg.SPLIT_NAME != "":
+      NUMPY_DIR = os.path.join(NUMPY_DIR, cfg.SPLIT_NAME)
     # is contextual or not
     if not cfg.SINGLE_SENTENCE:
         NUMPY_DIR += '_contextual'
     # type of pre-trained word embedding
     if cfg.IS_ELMO:
-        NUMPY_DIR += '/elmo_' + cfg.ELMO_MODE
+        NUMPY_DIR += '/elmo_' + "layer_" + str(cfg.ELMO_LAYER)
     elif cfg.IS_BERT:
-        NUMPY_DIR += '/bert'
+        NUMPY_DIR += '/bert_'
+        if cfg.BERT_LARGE:
+          NUMPY_DIR += "large"
+        NUMPY_DIR += "layer_" + str(cfg.BERT_LAYER)
     else:  # default: GloVe
         NUMPY_DIR += '/glove'
     # Avg/LSTM
@@ -229,34 +247,52 @@ def main():
         sl = len_np.tolist()
         word_embs_stack = torch.from_numpy(word_embs_np)
     else:
+        if cfg.IS_ELMO:
+            ELMO_EMBEDDER = ElmoEmbedder()
+        if cfg.IS_BERT: 
+            from pytorch_transformers import BertTokenizer, BertModel
+            bert_model = 'bert-large-uncased' if cfg.BERT_LARGE else 'bert-base-uncased'
+            bert_tokenizer = BertTokenizer.from_pretrained(bert_model)
+            bert_model = BertModel.from_pretrained(bert_model, output_hidden_states=True)
+            bert_model.eval()
+            if cfg.CUDA:
+              bert_model = bert_model.cuda()
         sl = []
         for (k, v) in tqdm(target_utterances.items(), total=len(target_utterances)):
+            context_v = contexts[k]
             if cfg.SINGLE_SENTENCE:
                 # only including the target utterance
                 input_text = v[0]
             else:
                 # discourse context + target utterance
-                context_v = contexts[k]
                 input_text = context_v[0] + v[0]
             if cfg.IS_ELMO:
                 from models import get_sentence_elmo
-                embedder = ElmoEmbedder()
-                curr_emb, l = get_sentence_elmo(input_text, embedder=embedder,
-                                                elmo_mode=cfg.ELMO_MODE,
+                embedder = ELMO_EMBEDDER
+                curr_emb, l = get_sentence_elmo(v[0], context_v[0], embedder=embedder,
+                                                layer=cfg.ELMO_LAYER,
                                                 not_contextual=cfg.SINGLE_SENTENCE,
                                                 LSTM=cfg.LSTM.FLAG,
                                                 seq_len=cfg.LSTM.SEQ_LEN)
             elif cfg.IS_BERT:
-                from bert_serving.client import BertClient
-                bc = BertClient()
                 if cfg.SINGLE_SENTENCE:
                     from models import get_sentence_bert
-                    curr_emb, l = get_sentence_bert(input_text, bc, LSTM=cfg.LSTM.FLAG,
+                    curr_emb, l = get_sentence_bert(input_text, 
+                                                    bert_tokenizer,
+                                                    bert_model,
+                                                    layer=cfg.BERT_LAYER,
+                                                    GPU=cfg.CUDA,
+                                                    LSTM=cfg.LSTM.FLAG,
                                                     max_seq_len=cfg.LSTM.SEQ_LEN,
                                                     is_single=cfg.SINGLE_SENTENCE)
                 else:
                     from models import get_sentence_bert_context
-                    curr_emb, l = get_sentence_bert_context(v[0], context_v[0], bc,
+                    curr_emb, l = get_sentence_bert_context(v[0], 
+                                                            context_v[0], 
+                                                            bert_tokenizer,
+                                                            bert_model,
+                                                            layer=cfg.BERT_LAYER,
+                                                            GPU=cfg.CUDA,
                                                             LSTM=cfg.LSTM.FLAG,
                                                             max_sentence_len=30,
                                                             max_context_len=120)
@@ -282,7 +318,7 @@ def main():
 
     if cfg.TRAIN.FLAG:
         logging.info("Start training\n===============================")
-        save_path = "./" + cfg.EXPERIMENT_NAME
+        save_path = cfg.OUT_PATH + cfg.EXPERIMENT_NAME
         if cfg.IS_RANDOM:
             save_path += "_random"
             r_model = RatingModel(cfg, save_path)
@@ -330,7 +366,7 @@ def main():
                 logging.info(f'Avg. validation loss: {val_loss_mean}')
                 logging.info(f'Avg. validation r: {val_r_mean}')
     else:
-        eval_path = "./" + cfg.EXPERIMENT_NAME
+        eval_path = cfg.OUT_PATH + cfg.EXPERIMENT_NAME
         epoch_lst = [0, 1]
         i = 0
         while i < cfg.TRAIN.TOTAL_EPOCH - cfg.TRAIN.INTERVAL + 1:

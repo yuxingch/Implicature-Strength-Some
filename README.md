@@ -88,6 +88,13 @@ cfg.TRAIN.DROPOUT.FC_2 = 0.75             # drop out prob in fully connected lay
 User can use the command-line argument to specify the path to the configuration file:
 - `--conf`: the path to the configuration file, if required
 
+## Getting Started
+To start the BERT service:
+```
+bert-serving-start -model_dir BERT_model/uncased_L-12_H-768_A-12/ -num_worker=4 -max_seq_len=30 -pooling_strategy=NONE
+```
+This will start a service with four workers. The maximum length of sequence that a BERT model can handle is 30. By setting `pooling_strategy` to `None`, we get ELMo-like contextual word embeddings (i.e. the service will return a [30, 768] matrix for every sequence.).
+
 To use new parameters coming from the configuration file (e.g. `my_conf.yml`), first make sure the file is in `./cfg/`. Then use this line to run the script:
 ```
 python run.py --conf='./cfg/my_conf.yml'

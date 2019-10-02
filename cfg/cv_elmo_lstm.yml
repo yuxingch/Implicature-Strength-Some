@@ -1,11 +1,11 @@
 SOME_DATABASE: './some_database.csv'
-CONFIG_NAME: 'bert_lstm_attn'
-EXPERIMENT_NAME: 'bert_lstm_attn'
+CONFIG_NAME: 'elmo_lstm'
+EXPERIMENT_NAME: 'elmo_lstm'
 PREDON: 'train'
 SINGLE_SENTENCE: True
 CUDA: True
-IS_ELMO: False
-IS_BERT: True
+IS_ELMO: True
+IS_BERT: False
 
 
 TRAIN:
@@ -25,4 +25,4 @@ LSTM:
     HIDDEN_DIM: 100
     LAYERS: 2
     DROP_PROB: 0.3
-    ATTN: True
+    ATTN: False

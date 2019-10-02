@@ -82,8 +82,8 @@ class BiLSTM(nn.Module):
     using a bidirectional LSTM. It feeds the input through LSTM and returns
     all the hidden states.
 
-    Then, the hidden states will be fed into a fully connected layer to get
-    a downward projection, which will be the input of the prediction layer.
+    Then, the hidden states are fed into a projection layer, which in return is
+    passed through a sigmoid function to predict the ratings.
     """
     def __init__(self, vec_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout, bidirection, is_gpu, batch_size=32):
         super(BiLSTM, self).__init__()
@@ -106,15 +106,13 @@ class BiLSTM(nn.Module):
                             dropout=self.drop_prob,
                             bidirectional=self.bidirect)
         if self.bidirect:
-            self.fc1 = fc_layer(self.hidden_dim*2, self.hidden_dim, self.dropout[0])
-            self.fc2 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[1])
             self.get_score = nn.Sequential(
-                nn.Linear(self.hidden_dim//2, 1, bias=True))
+                nn.Linear(self.hidden_dim*2, 1, bias=True),
+                nn.Sigmoid())
         else:
-            self.fc1 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[0])
-            self.fc2 = fc_layer(self.hidden_dim//2, self.hidden_dim//4, self.dropout[1])
             self.get_score = nn.Sequential(
-                nn.Linear(self.hidden_dim//4, 1, bias=True))
+                nn.Linear(self.hidden_dim, 1, bias=True),
+                nn.Sigmoid())
 
     def forward(self, x, batch_size, seq_lens):
         """
@@ -124,7 +122,7 @@ class BiLSTM(nn.Module):
 
         output - Tensor shape (curr_batch_size, 1)
         """
-        assert x.shape[0] == batch_size
+#        assert x.shape[0] == batch_size
         if self.bidirect:
             h0 = torch.randn(self.num_layers*2, batch_size, self.hidden_dim)
             c0 = torch.randn(self.num_layers*2, batch_size, self.hidden_dim)
@@ -142,15 +140,17 @@ class BiLSTM(nn.Module):
             x = x.reshape(batch_size, seq_lens[0], self.hidden_dim)
         x = x.permute(0, 2, 1)
         mask = torch.zeros(x.size())
-
-        for i in range(batch_size):
-            mask[i, :, seq_lens[i]-1] = 1
+        if self.bidirect:
+          for i in range(batch_size):
+            mask[i, :self.hidden_dim, seq_lens[i]-1] = 1
+            mask[i, self.hidden_dim:, 0] = 1
+        else:
+          for i in range(batch_size):
+              mask[i, :, seq_lens[i]-1] = 1
         if self.is_gpu:
             mask = mask.cuda()
         x = x * mask  # (batch_size, hidden_dim, max_seq_len)
         x = x.sum(dim=2)  # (batch_size, hidden_dim)
-        x = self.fc1(x)
-        x = self.fc2(x)
         return self.get_score(x), None
 
 
@@ -158,10 +158,10 @@ class BiLSTMAttn(nn.Module):
     """
     The purpose of this module is to encode a sequence (sentence/paragraph)
     using a bidirectional LSTM. It feeds the input through LSTM. The LSTM
-    output is then passed into attention layer to get a weighted sum.
+    output is then passed through a self-attention layer to get a weighted sum.
 
-    Then, the hidden states will be fed into a fully connected layer to get
-    a downward projection, which will be the input of the prediction layer.
+    Then, the hidden states are fed into a projection layer, which in return is
+    passed through a sigmoid function to predict the ratings.
     """
     def __init__(self, vec_dim, seq_len, hidden_dim, num_layers, drop_prob, dropout, bidirection, is_gpu, batch_size=32):
         super(BiLSTMAttn, self).__init__()
@@ -184,16 +184,15 @@ class BiLSTMAttn(nn.Module):
                             dropout=self.drop_prob,
                             bidirectional=self.bidirect)
         if self.bidirect:
-            self.attention = MultiHeadAttention(self.hidden_dim*2, 8, self.is_gpu)
-            self.fc1 = fc_layer(self.hidden_dim*2, self.hidden_dim, self.dropout[0])
-            self.fc2 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[1])
+            self.attention = SelfAttention(self.hidden_dim*2, self.is_gpu)
             self.get_score = nn.Sequential(
-                nn.Linear(self.hidden_dim//2, 1, bias=True))
+                nn.Linear(self.hidden_dim*2, 1, bias=True),
+                nn.Sigmoid())
         else:
-            self.fc1 = fc_layer(self.hidden_dim, self.hidden_dim//2, self.dropout[0])
-            self.fc2 = fc_layer(self.hidden_dim//2, self.hidden_dim//4, self.dropout[1])
+            self.attention = SelfAttention(self.hidden_dim, self.is_gpu)
             self.get_score = nn.Sequential(
-                nn.Linear(self.hidden_dim//4, 1, bias=True))
+                nn.Linear(self.hidden_dim, 1, bias=True),
+                nn.Sigmoid())
 
     def forward(self, x, batch_size, seq_lens):
         """
@@ -219,110 +218,128 @@ class BiLSTMAttn(nn.Module):
         else:
             x = x.reshape(batch_size, seq_lens[0], self.hidden_dim)
         x, attn_weights = self.attention(x, seq_lens)
-        x = self.fc1(x)
-        x = self.fc2(x)
         return self.get_score(x), attn_weights
 
-
-class MultiHeadAttention(nn.Module):
-    def __init__(self, lstm_hidden_size, h, is_gpu=False):
-        super(MultiHeadAttention, self).__init__()
-        assert lstm_hidden_size % h == 0
-        self.num_head = h
-        self.is_gpu = is_gpu
-        self.d_m = lstm_hidden_size
-        self.d_k = self.d_m // self.num_head
-        self.define_module()
-
-    def define_module(self):
-        self.dropout = nn.Dropout(0.1)
-        self.softmax = nn.Softmax(dim=-1)
-        self.linear = nn.Linear(self.d_m, self.d_m)
-        self.attn = None
-
-    def get_mask(self, x, seq_lens):
-        """
-        Get the mask for each padded entry
-        """
-        max_len = seq_lens[0]
-        mask = torch.ones(x.size()[0], max_len)
-        if self.is_gpu:
-            mask = mask.cuda()
-        for idx, curr_l in enumerate(seq_lens):
-            if curr_l < max_len:
-                mask[idx, curr_l:] = 0
-        return mask.unsqueeze(1)
-
-    def attention_func(self, x, mask):
-        assert self.d_k == x.size(-1)
-        mask = mask.unsqueeze(1)
-        scores = torch.matmul(x, x.transpose(-2,-1)) \
-            / math.sqrt(self.d_k)
-        scores = scores.masked_fill(mask==0, -1e9)
-        p_attn = self.softmax(scores)
-        p_attn = self.dropout(p_attn)
-        return torch.matmul(p_attn, x), p_attn
-
-    def forward(self, x, seq_lens):
-        """
-
-        x -- (batch_size, max_seq_len, hidden_dim)
-        self.attn -- (batch_size, num_head, max_seq_len, max_seq_len)
-        """
-        # mask = (x != 0).unsqueeze(-2)
-        curr_batch_size = x.shape[0]
-        mask = self.get_mask(x, seq_lens)
-        x = x.view(curr_batch_size, -1, self.num_head, self.d_k).transpose(1, 2)
-        x, self.attn = self.attention_func(x, mask)
-        x = x.transpose(1, 2).contiguous().view(curr_batch_size, -1, self.num_head*self.d_k)
-        x = self.linear(x)
-        if self.is_gpu:
-            self.attn = self.attn.cpu()
-        return torch.sum(x, 1), self.attn.data.numpy()
-
-
-# DEPRECATED
 class SelfAttention(nn.Module):
-    def __init__(self, batch_size, lstm_hidden_size, attn_size, batch_first=True):
+
+    def __init__(self, hidden_dim, is_gpu=False):
         super(SelfAttention, self).__init__()
-        self.batch_size = batch_size
-        self.lstm_hidden_size = lstm_hidden_size
-        self.attn_size = attn_size
-        self.batch_first = batch_first
-        self.define_module()
+        self.is_gpu = is_gpu
+        self.attention1 = nn.Linear(hidden_dim, 50)
+        self.attention2 = nn.Linear(50, 1)
 
-    def define_module(self):
-        self.attention_w = nn.Parameter(torch.FloatTensor(self.batch_size, self.attn_size, self.lstm_hidden_size))
-        nn.init.uniform_(self.attention_w.data, -0.005, 0.005)
-        self.softmax = nn.Softmax(dim=-1)
-        self.dropout = nn.Dropout(0.1)
+    def forward(self, lstm_out, seq_lens):
+        # B x max_seq_len x 50
+        attention1 = torch.tanh(self.attention1(lstm_out)) 
+        # B x max_seq_len x 1
+        attention2 = torch.softmax(self.attention2(attention1), dim=1) 
+        dot_product = torch.sum(torch.mul(lstm_out, attention2), dim=1)
 
-    def get_mask(self, x, seq_lens):
-        """
-        Get the mask for each padded entry
-        """
-        max_len = seq_lens[0]
-        mask = torch.ones(x.size()[0], max_len)
-        for idx, curr_l in enumerate(seq_lens):
-            if curr_l < max_len:
-                mask[idx, curr_l:] = 0
-        return mask.unsqueeze(1)
+        attention_weights = attention2
+        if self.is_gpu:
+          attention_weights = attention_weights.cpu()
+        return dot_product, attention_weights.detach().numpy()
 
-    def masked_softmax(self, logits, mask):
-        exp_mask = (1 - mask) * (-1e30)
-        masked_logits = logits + exp_mask
-        return self.softmax(masked_logits)
 
-    def forward(self, x, seq_lens):
-        """
-
-        x -- (batch_size, hidden_dim, max_seq_len)
-        self.attention_w -- (batch_size, attn_size, hidden_dim)
-        """
-        scores = torch.matmul(self.attention_w, x)
-        # scores = self.nonlinear(scores)
-        mask = self.get_mask(scores, seq_lens)
-        scores = self.masked_softmax(scores, mask)
-        scores = self.dropout(scores)
-        weighted_x = torch.matmul(scores, x.permute(0, 2, 1))
-        return torch.sum(weighted_x, 1)/self.attn_size, scores.data.numpy()
+#class MultiHeadAttention(nn.Module):
+#    def __init__(self, lstm_hidden_size, h, is_gpu=False):
+#        super(MultiHeadAttention, self).__init__()
+#        assert lstm_hidden_size % h == 0
+#        self.num_head = h
+#        self.is_gpu = is_gpu
+#        self.d_m = lstm_hidden_size
+#        self.d_k = self.d_m // self.num_head
+#        self.define_module()
+#
+#    def define_module(self):
+#        self.dropout = nn.Dropout(0.1)
+#        self.softmax = nn.Softmax(dim=-1)
+#        self.linear = nn.Linear(self.d_m, self.d_m)
+#        self.attn = None
+#
+#    def get_mask(self, x, seq_lens):
+#        """
+#        Get the mask for each padded entry
+#        """
+#        max_len = seq_lens[0]
+#        mask = torch.ones(x.size()[0], max_len)
+#        if self.is_gpu:
+#            mask = mask.cuda()
+#        for idx, curr_l in enumerate(seq_lens):
+#            if curr_l < max_len:
+#                mask[idx, curr_l:] = 0
+#        return mask.unsqueeze(1)
+#
+#    def attention_func(self, x, mask):
+#        assert self.d_k == x.size(-1)
+#        mask = mask.unsqueeze(1)
+#        scores = torch.matmul(x, x.transpose(-2,-1)) \
+#            / math.sqrt(self.d_k)
+#        scores = scores.masked_fill(mask==0, -1e9)
+#        p_attn = self.softmax(scores)
+#        p_attn = self.dropout(p_attn)
+#        return torch.matmul(p_attn, x), p_attn
+#
+#    def forward(self, x, seq_lens):
+#        """
+#
+#        x -- (batch_size, max_seq_len, hidden_dim)
+#        self.attn -- (batch_size, num_head, max_seq_len, max_seq_len)
+#        """
+#        # mask = (x != 0).unsqueeze(-2)
+#        curr_batch_size = x.shape[0]
+#        mask = self.get_mask(x, seq_lens)
+#        x = x.view(curr_batch_size, -1, self.num_head, self.d_k).transpose(1, 2)
+#        x, self.attn = self.attention_func(x, mask)
+#        x = x.transpose(1, 2).contiguous().view(curr_batch_size, -1, self.num_head*self.d_k)
+#        x = self.linear(x)
+#        if self.is_gpu:
+#            self.attn = self.attn.cpu()
+#        return torch.sum(x, 1), self.attn.data.numpy()
+#
+#
+## DEPRECATED
+#class SelfAttention(nn.Module):
+#    def __init__(self, batch_size, lstm_hidden_size, attn_size, batch_first=True):
+#        super(SelfAttention, self).__init__()
+#        self.batch_size = batch_size
+#        self.lstm_hidden_size = lstm_hidden_size
+#        self.attn_size = attn_size
+#        self.batch_first = batch_first
+#        self.define_module()
+#
+#    def define_module(self):
+#        self.attention_w = nn.Parameter(torch.FloatTensor(self.batch_size, self.attn_size, self.lstm_hidden_size))
+#        nn.init.uniform_(self.attention_w.data, -0.005, 0.005)
+#        self.softmax = nn.Softmax(dim=-1)
+#        self.dropout = nn.Dropout(0.1)
+#
+#    def get_mask(self, x, seq_lens):
+#        """
+#        Get the mask for each padded entry
+#        """
+#        max_len = seq_lens[0]
+#        mask = torch.ones(x.size()[0], max_len)
+#        for idx, curr_l in enumerate(seq_lens):
+#            if curr_l < max_len:
+#                mask[idx, curr_l:] = 0
+#        return mask.unsqueeze(1)
+#
+#    def masked_softmax(self, logits, mask):
+#        exp_mask = (1 - mask) * (-1e30)
+#        masked_logits = logits + exp_mask
+#        return self.softmax(masked_logits)
+#
+#    def forward(self, x, seq_lens):
+#        """
+#
+#        x -- (batch_size, hidden_dim, max_seq_len)
+#        self.attention_w -- (batch_size, attn_size, hidden_dim)
+#        """
+#        scores = torch.matmul(self.attention_w, x)
+#        # scores = self.nonlinear(scores)
+#        mask = self.get_mask(scores, seq_lens)
+#        scores = self.masked_softmax(scores, mask)
+#        scores = self.dropout(scores)
+#        weighted_x = torch.matmul(scores, x.permute(0, 2, 1))
+#        return torch.sum(weighted_x, 1)/self.attn_size, scores.data.numpy()
