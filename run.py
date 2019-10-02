@@ -79,6 +79,11 @@ cfg.TRAIN.DROPOUT = edict()
 cfg.TRAIN.DROPOUT.FC_1 = 0.75
 cfg.TRAIN.DROPOUT.FC_2 = 0.75
 
+# Evaluation options
+cfg.EVAL = edict()
+cfg.EVAL.FLAG = False
+cfg.EVAL.BEST_EPOCH = 100
+
 GLOVE_DIM = 100
 NOT_EXIST = torch.FloatTensor(1, GLOVE_DIM).zero_()
 
@@ -151,12 +156,13 @@ def main():
         cfg_setup(opt.config_file)
         if not cfg.MODE == 'train':
             cfg.TRAIN.FLAG = False
+            cfg.EVAL.FLAG = True
         if opt.out_path is not None:
             cfg.OUT_PATH = opt.out_path
     else:
         print("Using default settings.")
 
-    logging.basicConfig(level=logging.INFO) 
+    logging.basicConfig(level=logging.INFO)
 
     # random seed
     random.seed(cfg.SEED)
@@ -178,45 +184,40 @@ def main():
     logging.info(pprint.pformat(cfg))
     logging.info(f'Using random seed {cfg.SEED}.')
 
-    if cfg.MODE == 'train':
+    if cfg.MODE == 'qual':
+        load_db = "./datasets/qualitative.txt"
+        cfg.PREDON = 'qual'
+    elif cfg.MODE == 'train':
         load_db = curr_path + "/train_db.csv"
     elif cfg.MODE == 'test':
         load_db = curr_path + "/" + cfg.PREDON + "_db.csv"
     elif cfg.MODE == 'all':
         load_db = curr_path + "/all_db.csv"
 
-    if not os.path.isfile(load_db):
-        split_train_test(cfg.SEED, curr_path)
-    labels, target_utterances, contexts = load_dataset(cfg.SOME_DATABASE,
-                                                       load_db,
-                                                       "./swbdext.csv",
-                                                       cfg.PREDICTION_TYPE)
-
     curr_max = 7
     curr_min = 1
-    original_labels = []
-
-    # normalize the values [1,7] --> [0,1]
-    normalized_labels = []
     max_diff = curr_max - curr_min
-    keys = []
-    for (k, v) in labels.items():
-        keys.append(k)
-        original_labels.append(float(v))
-        labels[k] = (float(v) - curr_min) / max_diff
-        normalized_labels.append(labels[k])
-    # cfg.BATCH_ITEM_NUM = math.ceil(len(normalized_labels)/float(cfg.TRAIN.BATCH_SIZE))
 
     # obtain pre-trained word vectors
+    sl = []
     word_embs = []
     word_embs_np = None
     word_embs_stack = None
 
-
+    if not cfg.MODE == 'qual':
+        if not os.path.isfile(load_db):
+            split_train_test(cfg.SEED, curr_path)
+        labels, target_utterances, contexts = load_dataset(cfg.SOME_DATABASE,
+                                                           load_db,
+                                                           "./swbdext.csv",
+                                                           cfg.PREDICTION_TYPE)
+    else:
+        if not os.path.isfile(load_db):
+            sys.exit(f'Fail to find the file {load_db} for qualitative evaluation. Exit.')
+        with open(load_db, "r") as qual_file:
+            sentences = [x.strip() for x in qual_file.readlines()]
 
     NUMPY_DIR = './datasets/seed_' + str(cfg.SEED)
-    if cfg.SPLIT_NAME != "":
-      NUMPY_DIR = os.path.join(NUMPY_DIR, cfg.SPLIT_NAME)
     # is contextual or not
     if not cfg.SINGLE_SENTENCE:
         NUMPY_DIR += '_contextual'
@@ -226,7 +227,7 @@ def main():
     elif cfg.IS_BERT:
         NUMPY_DIR += '/bert_'
         if cfg.BERT_LARGE:
-          NUMPY_DIR += "large"
+            NUMPY_DIR += "large"
         NUMPY_DIR += "layer_" + str(cfg.BERT_LAYER)
     else:  # default: GloVe
         NUMPY_DIR += '/glove'
@@ -241,6 +242,7 @@ def main():
     mkdir_p(NUMPY_DIR)
     print(NUMPY_PATH)
     logging.info(f'Path to the current word embeddings: {NUMPY_PATH}')
+
     if os.path.isfile(NUMPY_PATH):
         word_embs_np = np.load(NUMPY_PATH)
         len_np = np.load(LENGTH_PATH)
@@ -249,65 +251,91 @@ def main():
     else:
         if cfg.IS_ELMO:
             ELMO_EMBEDDER = ElmoEmbedder()
-        if cfg.IS_BERT: 
+        if cfg.IS_BERT:
             from pytorch_transformers import BertTokenizer, BertModel
             bert_model = 'bert-large-uncased' if cfg.BERT_LARGE else 'bert-base-uncased'
             bert_tokenizer = BertTokenizer.from_pretrained(bert_model)
             bert_model = BertModel.from_pretrained(bert_model, output_hidden_states=True)
             bert_model.eval()
             if cfg.CUDA:
-              bert_model = bert_model.cuda()
-        sl = []
-        for (k, v) in tqdm(target_utterances.items(), total=len(target_utterances)):
-            context_v = contexts[k]
-            if cfg.SINGLE_SENTENCE:
-                # only including the target utterance
-                input_text = v[0]
-            else:
-                # discourse context + target utterance
-                input_text = context_v[0] + v[0]
-            if cfg.IS_ELMO:
-                from models import get_sentence_elmo
-                embedder = ELMO_EMBEDDER
-                curr_emb, l = get_sentence_elmo(v[0], context_v[0], embedder=embedder,
-                                                layer=cfg.ELMO_LAYER,
-                                                not_contextual=cfg.SINGLE_SENTENCE,
+                bert_model = bert_model.cuda()
+        if cfg.MODE == 'qual':
+            # TODO: currently only BERT, in future maybe need other embedding methods as well
+            from models import get_sentence_bert
+            for input_text in sentences:
+                curr_emb, l = get_sentence_bert(input_text,
+                                                bert_tokenizer,
+                                                bert_model,
+                                                layer=cfg.BERT_LAYER,
+                                                GPU=cfg.CUDA,
                                                 LSTM=cfg.LSTM.FLAG,
-                                                seq_len=cfg.LSTM.SEQ_LEN)
-            elif cfg.IS_BERT:
+                                                max_seq_len=cfg.LSTM.SEQ_LEN,
+                                                is_single=cfg.SINGLE_SENTENCE)
+                sl.append(l)
+                word_embs.append(curr_emb)
+        else:
+            for (k, v) in tqdm(target_utterances.items(), total=len(target_utterances)):
+                context_v = contexts[k]
                 if cfg.SINGLE_SENTENCE:
-                    from models import get_sentence_bert
-                    curr_emb, l = get_sentence_bert(input_text, 
-                                                    bert_tokenizer,
-                                                    bert_model,
-                                                    layer=cfg.BERT_LAYER,
-                                                    GPU=cfg.CUDA,
-                                                    LSTM=cfg.LSTM.FLAG,
-                                                    max_seq_len=cfg.LSTM.SEQ_LEN,
-                                                    is_single=cfg.SINGLE_SENTENCE)
+                    # only including the target utterance
+                    input_text = v[0]
                 else:
-                    from models import get_sentence_bert_context
-                    curr_emb, l = get_sentence_bert_context(v[0], 
-                                                            context_v[0], 
-                                                            bert_tokenizer,
-                                                            bert_model,
-                                                            layer=cfg.BERT_LAYER,
-                                                            GPU=cfg.CUDA,
-                                                            LSTM=cfg.LSTM.FLAG,
-                                                            max_sentence_len=30,
-                                                            max_context_len=120)
-            else:
-                from models import get_sentence_glove
-                curr_emb, l = get_sentence_glove(input_text, LSTM=cfg.LSTM.FLAG,
-                                                 not_contextual=cfg.SINGLE_SENTENCE,
-                                                 seq_len=cfg.LSTM.SEQ_LEN)
-            sl.append(l)
-            word_embs.append(curr_emb)
+                    # discourse context + target utterance
+                    input_text = context_v[0] + v[0]
+                if cfg.IS_ELMO:
+                    from models import get_sentence_elmo
+                    embedder = ELMO_EMBEDDER
+                    curr_emb, l = get_sentence_elmo(v[0], context_v[0], embedder=embedder,
+                                                    layer=cfg.ELMO_LAYER,
+                                                    not_contextual=cfg.SINGLE_SENTENCE,
+                                                    LSTM=cfg.LSTM.FLAG,
+                                                    seq_len=cfg.LSTM.SEQ_LEN)
+                elif cfg.IS_BERT:
+                    if cfg.SINGLE_SENTENCE:
+                        from models import get_sentence_bert
+                        curr_emb, l = get_sentence_bert(input_text,
+                                                        bert_tokenizer,
+                                                        bert_model,
+                                                        layer=cfg.BERT_LAYER,
+                                                        GPU=cfg.CUDA,
+                                                        LSTM=cfg.LSTM.FLAG,
+                                                        max_seq_len=cfg.LSTM.SEQ_LEN,
+                                                        is_single=cfg.SINGLE_SENTENCE)
+                    else:
+                        from models import get_sentence_bert_context
+                        curr_emb, l = get_sentence_bert_context(v[0],
+                                                                context_v[0],
+                                                                bert_tokenizer,
+                                                                bert_model,
+                                                                layer=cfg.BERT_LAYER,
+                                                                GPU=cfg.CUDA,
+                                                                LSTM=cfg.LSTM.FLAG,
+                                                                max_sentence_len=30,
+                                                                max_context_len=120)
+                else:
+                    from models import get_sentence_glove
+                    curr_emb, l = get_sentence_glove(input_text, LSTM=cfg.LSTM.FLAG,
+                                                     not_contextual=cfg.SINGLE_SENTENCE,
+                                                     seq_len=cfg.LSTM.SEQ_LEN)
+                sl.append(l)
+                word_embs.append(curr_emb)
         np.save(LENGTH_PATH, np.array(sl))
         word_embs_stack = torch.stack(word_embs)
         np.save(NUMPY_PATH, word_embs_stack.numpy())
 
-    # If want to experiment with random embeddings:
+    #  normalize the values [1,7] --> [0,1], if training/testing/non-qualitative evaluation
+    original_labels = []
+    normalized_labels = []
+    keys = []
+    if not cfg.MODE == 'qual':
+        for (k, v) in labels.items():
+            keys.append(k)
+            original_labels.append(float(v))
+            labels[k] = (float(v) - curr_min) / max_diff
+            normalized_labels.append(labels[k])
+    # cfg.BATCH_ITEM_NUM = math.ceil(len(normalized_labels)/float(cfg.TRAIN.BATCH_SIZE))
+
+    #  If want to experiment with random embeddings:
     fake_embs = None
     if cfg.IS_RANDOM:
         print("randomized word vectors")
@@ -365,6 +393,33 @@ def main():
                 logging.info(f'Avg. train loss: {train_loss_mean}')
                 logging.info(f'Avg. validation loss: {val_loss_mean}')
                 logging.info(f'Avg. validation r: {val_r_mean}')
+    elif cfg.MODE == 'qual':
+        logging.info("Start qualitative analysis\n===============================")
+        best_path = cfg.OUT_PATH + cfg.EXPERIMENT_NAME
+        load_path = os.path.join(best_path, "Model")
+        cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(cfg.EVAL.BEST_EPOCH)+ ".pth"
+        best_model = RatingModel(cfg, best_path)
+        preds, attn_weights = best_model.evaluate(word_embs_stack.float(), max_diff, curr_min, sl)
+        if cfg.LSTM.ATTN:
+            attn_path = os.path.join(best_path, "Attention")
+            mkdir_p(attn_path)
+            new_file_name = attn_path + '/' + cfg.PREDON + '_attn_epoch' + format(epoch) + '.npy'
+            np.save(new_file_name, attn_weights)
+            logging.info(f'Write attention weights to {new_file_name}.')
+        if cfg.SAVE_PREDS:
+            pred_file_path = best_path + '/Preds'
+            mkdir_p(pred_file_path)
+            new_file_name = pred_file_path + '/qualitative_results.csv'
+            f = open(new_file_name, 'w')
+            head_line = "Sentence,predicted\n"
+            logging.info(f'Start writing predictions to file:\n{new_file_name}\n...')
+            f.write(head_line)
+            for i in range(len(sentences)):
+                k = sentences[i]
+                pre = preds[i]
+                curr_line = k + ',' + format(pre)
+                f.write(curr_line+"\n")
+            f.close()
     else:
         eval_path = cfg.OUT_PATH + cfg.EXPERIMENT_NAME
         epoch_lst = [0, 1]
