@@ -403,7 +403,7 @@ def main():
         if cfg.LSTM.ATTN:
             attn_path = os.path.join(best_path, "Attention")
             mkdir_p(attn_path)
-            new_file_name = attn_path + '/' + cfg.PREDON + '_attn_epoch' + format(epoch) + '.npy'
+            new_file_name = attn_path + '/' + cfg.PREDON + '_attn_epoch' + format(cfg.EVAL.BEST_EPOCH) + '.npy'
             np.save(new_file_name, attn_weights)
             logging.info(f'Write attention weights to {new_file_name}.')
         if cfg.SAVE_PREDS:
