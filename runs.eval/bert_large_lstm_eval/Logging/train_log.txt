@@ -1,0 +1,544 @@
+Using configurations:
+{'BATCH_ITEM_NUM': 30,
+ 'BERT_LARGE': True,
+ 'BERT_LAYER': 18,
+ 'CONFIG_NAME': 'bert_large_lstm_eval',
+ 'CROSS_VALIDATION_FLAG': False,
+ 'CUDA': True,
+ 'ELMO_LAYER': 2,
+ 'ELMO_MODE': 'concat',
+ 'EXPERIMENT_NAME': 'bert_large_lstm_eval',
+ 'GLOVE_DIM': 100,
+ 'GPU_NUM': 1,
+ 'IS_BERT': True,
+ 'IS_ELMO': False,
+ 'IS_RANDOM': False,
+ 'KFOLDS': 5,
+ 'LSTM': {'ATTN': True,
+          'BIDIRECTION': True,
+          'DROP_PROB': 0.3,
+          'FLAG': True,
+          'HIDDEN_DIM': 800,
+          'LAYERS': 2,
+          'SEQ_LEN': 30},
+ 'MODE': 'train',
+ 'OUT_PATH': '/jagupard22/scr1/sebschu/runs.eval/',
+ 'PREDICTION_TYPE': 'rating',
+ 'PREDON': 'train',
+ 'RESUME_DIR': '',
+ 'SAVE_PREDS': False,
+ 'SEED': 0,
+ 'SINGLE_SENTENCE': True,
+ 'SOME_DATABASE': './some_database.csv',
+ 'TRAIN': {'BATCH_SIZE': 32,
+           'COEFF': {'BETA_1': 0.9, 'BETA_2': 0.999, 'EPS': 1e-08},
+           'DROPOUT': {'FC_1': 0.75, 'FC_2': 0.75},
+           'FLAG': True,
+           'INTERVAL': 190,
+           'LR': 0.001,
+           'LR_DECAY_EPOCH': 100,
+           'LR_DECAY_RATE': 1.0,
+           'START_EPOCH': 0,
+           'TOTAL_EPOCH': 190}}
+Using random seed 0.
+Path to the current word embeddings: ./datasets/seed_0/bert_largelayer_18_lstm/embs_train_30.npy
+Start training
+===============================
+initializing neural net
+Using configurations:
+{'BATCH_ITEM_NUM': 30,
+ 'BERT_LARGE': True,
+ 'BERT_LAYER': 18,
+ 'CONFIG_NAME': 'bert_large_lstm_eval',
+ 'CROSS_VALIDATION_FLAG': False,
+ 'CUDA': True,
+ 'ELMO_LAYER': 2,
+ 'ELMO_MODE': 'concat',
+ 'EXPERIMENT_NAME': 'bert_large_lstm_eval',
+ 'GLOVE_DIM': 100,
+ 'GPU_NUM': 1,
+ 'IS_BERT': True,
+ 'IS_ELMO': False,
+ 'IS_RANDOM': False,
+ 'KFOLDS': 5,
+ 'LSTM': {'ATTN': True,
+          'BIDIRECTION': True,
+          'DROP_PROB': 0.3,
+          'FLAG': True,
+          'HIDDEN_DIM': 800,
+          'LAYERS': 2,
+          'SEQ_LEN': 30},
+ 'MODE': 'train',
+ 'OUT_PATH': '/jagupard22/scr1/sebschu/runs.eval/',
+ 'PREDICTION_TYPE': 'rating',
+ 'PREDON': 'train',
+ 'RESUME_DIR': '',
+ 'SAVE_PREDS': False,
+ 'SEED': 0,
+ 'SINGLE_SENTENCE': True,
+ 'SOME_DATABASE': './some_database.csv',
+ 'TRAIN': {'BATCH_SIZE': 32,
+           'COEFF': {'BETA_1': 0.9, 'BETA_2': 0.999, 'EPS': 1e-08},
+           'DROPOUT': {'FC_1': 0.75, 'FC_2': 0.75},
+           'FLAG': True,
+           'INTERVAL': 190,
+           'LR': 0.001,
+           'LR_DECAY_EPOCH': 100,
+           'LR_DECAY_RATE': 1.0,
+           'START_EPOCH': 0,
+           'TOTAL_EPOCH': 190}}
+Using random seed 0.
+Path to the current word embeddings: ./datasets/seed_0/bert_largelayer_18_lstm/embs_train_30.npy
+Start training
+===============================
+initializing neural net
+[1/190][30/30] total train loss: 1.2004; total val loss: 0.0000 val r: 0.0000; time: 1.21sec
+[2/190][30/30] total train loss: 0.6103; total val loss: 0.0000 val r: 0.0000; time: 1.15sec
+[3/190][30/30] total train loss: 0.4021; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[4/190][30/30] total train loss: 0.2877; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[5/190][30/30] total train loss: 0.1794; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[6/190][30/30] total train loss: 0.1266; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[7/190][30/30] total train loss: 0.0718; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[8/190][30/30] total train loss: 0.0614; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[9/190][30/30] total train loss: 0.0543; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[10/190][30/30] total train loss: 0.0548; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[11/190][30/30] total train loss: 0.0415; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[12/190][30/30] total train loss: 0.0324; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[13/190][30/30] total train loss: 0.0344; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[14/190][30/30] total train loss: 0.0358; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[15/190][30/30] total train loss: 0.0338; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[16/190][30/30] total train loss: 0.0303; total val loss: 0.0000 val r: 0.0000; time: 1.16sec
+[17/190][30/30] total train loss: 0.0271; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[18/190][30/30] total train loss: 0.0231; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[19/190][30/30] total train loss: 0.0235; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[20/190][30/30] total train loss: 0.0224; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[21/190][30/30] total train loss: 0.0211; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[22/190][30/30] total train loss: 0.0240; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[23/190][30/30] total train loss: 0.0242; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[24/190][30/30] total train loss: 0.0229; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[25/190][30/30] total train loss: 0.0262; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[26/190][30/30] total train loss: 0.0246; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[27/190][30/30] total train loss: 0.0240; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[28/190][30/30] total train loss: 0.0255; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[29/190][30/30] total train loss: 0.0244; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[30/190][30/30] total train loss: 0.0266; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[31/190][30/30] total train loss: 0.0230; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[32/190][30/30] total train loss: 0.0216; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[33/190][30/30] total train loss: 0.0233; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[34/190][30/30] total train loss: 0.0217; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[35/190][30/30] total train loss: 0.0218; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[36/190][30/30] total train loss: 0.0217; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[37/190][30/30] total train loss: 0.0205; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[38/190][30/30] total train loss: 0.0201; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[39/190][30/30] total train loss: 0.0196; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[40/190][30/30] total train loss: 0.0204; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[41/190][30/30] total train loss: 0.0199; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[42/190][30/30] total train loss: 0.0190; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[43/190][30/30] total train loss: 0.0193; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[44/190][30/30] total train loss: 0.0196; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[45/190][30/30] total train loss: 0.0200; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[46/190][30/30] total train loss: 0.0192; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[47/190][30/30] total train loss: 0.0179; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[48/190][30/30] total train loss: 0.0163; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[49/190][30/30] total train loss: 0.0193; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[50/190][30/30] total train loss: 0.0210; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[51/190][30/30] total train loss: 0.0213; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[52/190][30/30] total train loss: 0.0213; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[53/190][30/30] total train loss: 0.0197; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[54/190][30/30] total train loss: 0.0185; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[55/190][30/30] total train loss: 0.0191; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[56/190][30/30] total train loss: 0.0191; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[57/190][30/30] total train loss: 0.0189; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[58/190][30/30] total train loss: 0.0209; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[59/190][30/30] total train loss: 0.0198; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[60/190][30/30] total train loss: 0.0191; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[61/190][30/30] total train loss: 0.0173; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[62/190][30/30] total train loss: 0.0172; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[63/190][30/30] total train loss: 0.0169; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[64/190][30/30] total train loss: 0.0155; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[65/190][30/30] total train loss: 0.0157; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[66/190][30/30] total train loss: 0.0175; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[67/190][30/30] total train loss: 0.0171; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[68/190][30/30] total train loss: 0.0172; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[69/190][30/30] total train loss: 0.0202; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[70/190][30/30] total train loss: 0.0208; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[71/190][30/30] total train loss: 0.0199; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[72/190][30/30] total train loss: 0.0209; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[73/190][30/30] total train loss: 0.0199; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[74/190][30/30] total train loss: 0.0182; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[75/190][30/30] total train loss: 0.0170; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[76/190][30/30] total train loss: 0.0189; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[77/190][30/30] total train loss: 0.0212; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[78/190][30/30] total train loss: 0.0201; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[79/190][30/30] total train loss: 0.0190; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[80/190][30/30] total train loss: 0.0173; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[81/190][30/30] total train loss: 0.0161; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[82/190][30/30] total train loss: 0.0160; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[83/190][30/30] total train loss: 0.0148; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[84/190][30/30] total train loss: 0.0162; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[85/190][30/30] total train loss: 0.0162; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[86/190][30/30] total train loss: 0.0154; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[87/190][30/30] total train loss: 0.0161; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[88/190][30/30] total train loss: 0.0165; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[89/190][30/30] total train loss: 0.0168; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[90/190][30/30] total train loss: 0.0155; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[91/190][30/30] total train loss: 0.0153; total val loss: 0.0000 val r: 0.0000; time: 1.17sec
+[92/190][30/30] total train loss: 0.0160; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[93/190][30/30] total train loss: 0.0155; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[94/190][30/30] total train loss: 0.0159; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[95/190][30/30] total train loss: 0.0158; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[96/190][30/30] total train loss: 0.0162; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[97/190][30/30] total train loss: 0.0159; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[98/190][30/30] total train loss: 0.0159; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[99/190][30/30] total train loss: 0.0164; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+learning rate updated: 0.001
+[100/190][30/30] total train loss: 0.0180; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[101/190][30/30] total train loss: 0.0164; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[102/190][30/30] total train loss: 0.0164; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[103/190][30/30] total train loss: 0.0165; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[104/190][30/30] total train loss: 0.0157; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[105/190][30/30] total train loss: 0.0146; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[106/190][30/30] total train loss: 0.0153; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[107/190][30/30] total train loss: 0.0157; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[108/190][30/30] total train loss: 0.0151; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[109/190][30/30] total train loss: 0.0164; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[110/190][30/30] total train loss: 0.0170; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[111/190][30/30] total train loss: 0.0168; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[112/190][30/30] total train loss: 0.0167; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[113/190][30/30] total train loss: 0.0170; total val loss: 0.0000 val r: 0.0000; time: 1.20sec
+[114/190][30/30] total train loss: 0.0171; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[115/190][30/30] total train loss: 0.0173; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[116/190][30/30] total train loss: 0.0158; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[117/190][30/30] total train loss: 0.0156; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[118/190][30/30] total train loss: 0.0165; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[119/190][30/30] total train loss: 0.0159; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[120/190][30/30] total train loss: 0.0148; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[121/190][30/30] total train loss: 0.0146; total val loss: 0.0000 val r: 0.0000; time: 1.20sec
+[122/190][30/30] total train loss: 0.0181; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[123/190][30/30] total train loss: 0.0173; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[124/190][30/30] total train loss: 0.0150; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[125/190][30/30] total train loss: 0.0160; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[126/190][30/30] total train loss: 0.0151; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[127/190][30/30] total train loss: 0.0159; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[128/190][30/30] total train loss: 0.0164; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[129/190][30/30] total train loss: 0.0159; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[130/190][30/30] total train loss: 0.0165; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[131/190][30/30] total train loss: 0.0164; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[132/190][30/30] total train loss: 0.0151; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[133/190][30/30] total train loss: 0.0142; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[134/190][30/30] total train loss: 0.0143; total val loss: 0.0000 val r: 0.0000; time: 1.20sec
+[135/190][30/30] total train loss: 0.0142; total val loss: 0.0000 val r: 0.0000; time: 1.20sec
+[136/190][30/30] total train loss: 0.0149; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[137/190][30/30] total train loss: 0.0150; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[138/190][30/30] total train loss: 0.0143; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[139/190][30/30] total train loss: 0.0142; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[140/190][30/30] total train loss: 0.0143; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[141/190][30/30] total train loss: 0.0147; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[142/190][30/30] total train loss: 0.0142; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[143/190][30/30] total train loss: 0.0137; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[144/190][30/30] total train loss: 0.0147; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[145/190][30/30] total train loss: 0.0141; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[146/190][30/30] total train loss: 0.0135; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[147/190][30/30] total train loss: 0.0144; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[148/190][30/30] total train loss: 0.0156; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[149/190][30/30] total train loss: 0.0148; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[150/190][30/30] total train loss: 0.0144; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[151/190][30/30] total train loss: 0.0136; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[152/190][30/30] total train loss: 0.0136; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[153/190][30/30] total train loss: 0.0141; total val loss: 0.0000 val r: 0.0000; time: 1.20sec
+[154/190][30/30] total train loss: 0.0143; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[155/190][30/30] total train loss: 0.0147; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[156/190][30/30] total train loss: 0.0147; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[157/190][30/30] total train loss: 0.0149; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[158/190][30/30] total train loss: 0.0144; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[159/190][30/30] total train loss: 0.0139; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[160/190][30/30] total train loss: 0.0139; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[161/190][30/30] total train loss: 0.0144; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[162/190][30/30] total train loss: 0.0140; total val loss: 0.0000 val r: 0.0000; time: 1.20sec
+[163/190][30/30] total train loss: 0.0139; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[164/190][30/30] total train loss: 0.0140; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[165/190][30/30] total train loss: 0.0144; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[166/190][30/30] total train loss: 0.0144; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[167/190][30/30] total train loss: 0.0142; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[168/190][30/30] total train loss: 0.0136; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[169/190][30/30] total train loss: 0.0138; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[170/190][30/30] total train loss: 0.0138; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[171/190][30/30] total train loss: 0.0137; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[172/190][30/30] total train loss: 0.0134; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[173/190][30/30] total train loss: 0.0129; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[174/190][30/30] total train loss: 0.0143; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[175/190][30/30] total train loss: 0.0152; total val loss: 0.0000 val r: 0.0000; time: 1.20sec
+[176/190][30/30] total train loss: 0.0144; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[177/190][30/30] total train loss: 0.0141; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[178/190][30/30] total train loss: 0.0134; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[179/190][30/30] total train loss: 0.0133; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[180/190][30/30] total train loss: 0.0133; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[181/190][30/30] total train loss: 0.0135; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[182/190][30/30] total train loss: 0.0130; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[183/190][30/30] total train loss: 0.0134; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[184/190][30/30] total train loss: 0.0132; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[185/190][30/30] total train loss: 0.0141; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[186/190][30/30] total train loss: 0.0135; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[187/190][30/30] total train loss: 0.0131; total val loss: 0.0000 val r: 0.0000; time: 1.18sec
+[188/190][30/30] total train loss: 0.0134; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[189/190][30/30] total train loss: 0.0134; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+[190/190][30/30] total train loss: 0.0144; total val loss: 0.0000 val r: 0.0000; time: 1.19sec
+Best epoch 0 with val_r = 0.0000.
+Using configurations:
+{'BATCH_ITEM_NUM': 30,
+ 'BERT_LARGE': True,
+ 'BERT_LAYER': 18,
+ 'CONFIG_NAME': 'bert_large_lstm_eval',
+ 'CROSS_VALIDATION_FLAG': False,
+ 'CUDA': True,
+ 'ELMO_LAYER': 2,
+ 'ELMO_MODE': 'concat',
+ 'EXPERIMENT_NAME': 'bert_large_lstm_eval',
+ 'GLOVE_DIM': 100,
+ 'GPU_NUM': 1,
+ 'IS_BERT': True,
+ 'IS_ELMO': False,
+ 'IS_RANDOM': False,
+ 'KFOLDS': 5,
+ 'LSTM': {'ATTN': True,
+          'BIDIRECTION': True,
+          'DROP_PROB': 0.3,
+          'FLAG': True,
+          'HIDDEN_DIM': 800,
+          'LAYERS': 2,
+          'SEQ_LEN': 30},
+ 'MODE': 'train',
+ 'OUT_PATH': '/jagupard22/scr1/sebschu/runs.eval/',
+ 'PREDICTION_TYPE': 'rating',
+ 'PREDON': 'test',
+ 'RESUME_DIR': '',
+ 'SAVE_PREDS': True,
+ 'SEED': 0,
+ 'SINGLE_SENTENCE': True,
+ 'SOME_DATABASE': './some_database.csv',
+ 'TRAIN': {'BATCH_SIZE': 32,
+           'COEFF': {'BETA_1': 0.9, 'BETA_2': 0.999, 'EPS': 1e-08},
+           'DROPOUT': {'FC_1': 0.75, 'FC_2': 0.75},
+           'FLAG': False,
+           'INTERVAL': 190,
+           'LR': 0.001,
+           'LR_DECAY_EPOCH': 100,
+           'LR_DECAY_RATE': 1.0,
+           'START_EPOCH': 0,
+           'TOTAL_EPOCH': 190}}
+Using random seed 0.
+Path to the current word embeddings: ./datasets/seed_0/bert_largelayer_18_lstm/embs_test_30.npy
+loading file https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-uncased-vocab.txt from cache at /sailhome/sebschu/.cache/torch/pytorch_transformers/9b3c03a36e83b13d5ba95ac965c9f9074a99e14340c523ab405703179e79fc46.542ce4285a40d23a559526243235df47c5f75c197f04f37d1a0c124c32c9a084
+loading configuration file https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-uncased-config.json from cache at /sailhome/sebschu/.cache/torch/pytorch_transformers/6dfaed860471b03ab5b9acb6153bea82b6632fb9bbe514d3fff050fe1319ee6d.4c88e2dec8f8b017f319f6db2b157fee632c0860d9422e4851bd0d6999f9ce38
+Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "finetuning_task": null,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 1024,
+  "initializer_range": 0.02,
+  "intermediate_size": 4096,
+  "layer_norm_eps": 1e-12,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 16,
+  "num_hidden_layers": 24,
+  "num_labels": 2,
+  "output_attentions": false,
+  "output_hidden_states": true,
+  "torchscript": false,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+loading weights file https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-uncased-pytorch_model.bin from cache at /sailhome/sebschu/.cache/torch/pytorch_transformers/54da47087cc86ce75324e4dc9bbb5f66c6e83a7c6bd23baea8b489acc8d09aa4.4d5343a4b979c4beeaadef17a0453d1bb183dd9b084f58b84c7cc781df343ae6
+epochs to test: [0, 1, 190]
+initializing neural net
+Load from: /jagupard22/scr1/sebschu/runs.eval/bert_large_lstm_eval/Model/RNet_epoch_0.pth
+Using configurations:
+{'BATCH_ITEM_NUM': 30,
+ 'BERT_LARGE': True,
+ 'BERT_LAYER': 18,
+ 'CONFIG_NAME': 'bert_large_lstm_eval',
+ 'CROSS_VALIDATION_FLAG': False,
+ 'CUDA': True,
+ 'ELMO_LAYER': 2,
+ 'ELMO_MODE': 'concat',
+ 'EXPERIMENT_NAME': 'bert_large_lstm_eval',
+ 'GLOVE_DIM': 100,
+ 'GPU_NUM': 1,
+ 'IS_BERT': True,
+ 'IS_ELMO': False,
+ 'IS_RANDOM': False,
+ 'KFOLDS': 5,
+ 'LSTM': {'ATTN': True,
+          'BIDIRECTION': True,
+          'DROP_PROB': 0.3,
+          'FLAG': True,
+          'HIDDEN_DIM': 800,
+          'LAYERS': 2,
+          'SEQ_LEN': 30},
+ 'MODE': 'train',
+ 'OUT_PATH': '/jagupard22/scr1/sebschu/runs.eval/',
+ 'PREDICTION_TYPE': 'rating',
+ 'PREDON': 'test',
+ 'RESUME_DIR': '',
+ 'SAVE_PREDS': True,
+ 'SEED': 0,
+ 'SINGLE_SENTENCE': True,
+ 'SOME_DATABASE': './some_database.csv',
+ 'TRAIN': {'BATCH_SIZE': 32,
+           'COEFF': {'BETA_1': 0.9, 'BETA_2': 0.999, 'EPS': 1e-08},
+           'DROPOUT': {'FC_1': 0.75, 'FC_2': 0.75},
+           'FLAG': False,
+           'INTERVAL': 190,
+           'LR': 0.001,
+           'LR_DECAY_EPOCH': 100,
+           'LR_DECAY_RATE': 1.0,
+           'START_EPOCH': 0,
+           'TOTAL_EPOCH': 190}}
+Using random seed 0.
+Path to the current word embeddings: ./datasets/seed_0/bert_largelayer_18_lstm/embs_test_30.npy
+epochs to test: [0, 1, 190]
+initializing neural net
+Load from: /jagupard22/scr1/sebschu/runs.eval/bert_large_lstm_eval/Model/RNet_epoch_0.pth
+Using configurations:
+{'BATCH_ITEM_NUM': 30,
+ 'BERT_LARGE': True,
+ 'BERT_LAYER': 18,
+ 'CONFIG_NAME': 'bert_large_lstm_eval',
+ 'CROSS_VALIDATION_FLAG': False,
+ 'CUDA': True,
+ 'ELMO_LAYER': 2,
+ 'ELMO_MODE': 'concat',
+ 'EXPERIMENT_NAME': 'bert_large_lstm_eval',
+ 'GLOVE_DIM': 100,
+ 'GPU_NUM': 1,
+ 'IS_BERT': True,
+ 'IS_ELMO': False,
+ 'IS_RANDOM': False,
+ 'KFOLDS': 5,
+ 'LSTM': {'ATTN': True,
+          'BIDIRECTION': True,
+          'DROP_PROB': 0.3,
+          'FLAG': True,
+          'HIDDEN_DIM': 800,
+          'LAYERS': 2,
+          'SEQ_LEN': 30},
+ 'MODE': 'train',
+ 'OUT_PATH': '/jagupard22/scr1/sebschu/runs.eval/',
+ 'PREDICTION_TYPE': 'rating',
+ 'PREDON': 'test',
+ 'RESUME_DIR': '',
+ 'SAVE_PREDS': True,
+ 'SEED': 0,
+ 'SINGLE_SENTENCE': True,
+ 'SOME_DATABASE': './some_database.csv',
+ 'TRAIN': {'BATCH_SIZE': 32,
+           'COEFF': {'BETA_1': 0.9, 'BETA_2': 0.999, 'EPS': 1e-08},
+           'DROPOUT': {'FC_1': 0.75, 'FC_2': 0.75},
+           'FLAG': False,
+           'INTERVAL': 190,
+           'LR': 0.001,
+           'LR_DECAY_EPOCH': 100,
+           'LR_DECAY_RATE': 1.0,
+           'START_EPOCH': 0,
+           'TOTAL_EPOCH': 190}}
+Using random seed 0.
+Path to the current word embeddings: ./datasets/seed_0/bert_largelayer_18_lstm/embs_test_30.npy
+epochs to test: [0, 1, 190]
+initializing neural net
+Load from: /jagupard22/scr1/sebschu/runs.eval/bert_large_lstm_eval/Model/RNet_epoch_0.pth
+Using configurations:
+{'BATCH_ITEM_NUM': 30,
+ 'BERT_LARGE': True,
+ 'BERT_LAYER': 18,
+ 'CONFIG_NAME': 'bert_large_lstm_eval',
+ 'CROSS_VALIDATION_FLAG': False,
+ 'CUDA': True,
+ 'ELMO_LAYER': 2,
+ 'ELMO_MODE': 'concat',
+ 'EXPERIMENT_NAME': 'bert_large_lstm_eval',
+ 'GLOVE_DIM': 100,
+ 'GPU_NUM': 1,
+ 'IS_BERT': True,
+ 'IS_ELMO': False,
+ 'IS_RANDOM': False,
+ 'KFOLDS': 5,
+ 'LSTM': {'ATTN': True,
+          'BIDIRECTION': True,
+          'DROP_PROB': 0.3,
+          'FLAG': True,
+          'HIDDEN_DIM': 800,
+          'LAYERS': 2,
+          'SEQ_LEN': 30},
+ 'MODE': 'train',
+ 'OUT_PATH': '/jagupard22/scr1/sebschu/runs.eval/',
+ 'PREDICTION_TYPE': 'rating',
+ 'PREDON': 'test',
+ 'RESUME_DIR': '',
+ 'SAVE_PREDS': True,
+ 'SEED': 0,
+ 'SINGLE_SENTENCE': True,
+ 'SOME_DATABASE': './some_database.csv',
+ 'TRAIN': {'BATCH_SIZE': 32,
+           'COEFF': {'BETA_1': 0.9, 'BETA_2': 0.999, 'EPS': 1e-08},
+           'DROPOUT': {'FC_1': 0.75, 'FC_2': 0.75},
+           'FLAG': False,
+           'INTERVAL': 190,
+           'LR': 0.001,
+           'LR_DECAY_EPOCH': 100,
+           'LR_DECAY_RATE': 1.0,
+           'START_EPOCH': 0,
+           'TOTAL_EPOCH': 190}}
+Using random seed 0.
+Path to the current word embeddings: ./datasets/seed_0/bert_largelayer_18_lstm/embs_test_30.npy
+epochs to test: [0, 1, 190]
+initializing neural net
+Load from: /jagupard22/scr1/sebschu/runs.eval/bert_large_lstm_eval/Model/RNet_epoch_0.pth
+Using configurations:
+{'BATCH_ITEM_NUM': 30,
+ 'BERT_LARGE': True,
+ 'BERT_LAYER': 18,
+ 'CONFIG_NAME': 'bert_large_lstm_eval',
+ 'CROSS_VALIDATION_FLAG': False,
+ 'CUDA': True,
+ 'ELMO_LAYER': 2,
+ 'ELMO_MODE': 'concat',
+ 'EXPERIMENT_NAME': 'bert_large_lstm_eval',
+ 'GLOVE_DIM': 100,
+ 'GPU_NUM': 1,
+ 'IS_BERT': True,
+ 'IS_ELMO': False,
+ 'IS_RANDOM': False,
+ 'KFOLDS': 5,
+ 'LSTM': {'ATTN': True,
+          'BIDIRECTION': True,
+          'DROP_PROB': 0.3,
+          'FLAG': True,
+          'HIDDEN_DIM': 800,
+          'LAYERS': 2,
+          'SEQ_LEN': 30},
+ 'MODE': 'train',
+ 'OUT_PATH': '/jagupard22/scr1/sebschu/runs.eval/',
+ 'PREDICTION_TYPE': 'rating',
+ 'PREDON': 'test',
+ 'RESUME_DIR': '',
+ 'SAVE_PREDS': True,
+ 'SEED': 0,
+ 'SINGLE_SENTENCE': True,
+ 'SOME_DATABASE': './some_database.csv',
+ 'TRAIN': {'BATCH_SIZE': 32,
+           'COEFF': {'BETA_1': 0.9, 'BETA_2': 0.999, 'EPS': 1e-08},
+           'DROPOUT': {'FC_1': 0.75, 'FC_2': 0.75},
+           'FLAG': False,
+           'INTERVAL': 190,
+           'LR': 0.001,
+           'LR_DECAY_EPOCH': 100,
+           'LR_DECAY_RATE': 1.0,
+           'START_EPOCH': 0,
+           'TOTAL_EPOCH': 190}}
+Using random seed 0.
+Path to the current word embeddings: ./datasets/seed_0/bert_largelayer_18_lstm/embs_test_30.npy
+epochs to test: [0, 1, 190]
+initializing neural net
+Load from: /jagupard22/scr1/sebschu/runs.eval/bert_large_lstm_eval/Model/RNet_epoch_0.pth

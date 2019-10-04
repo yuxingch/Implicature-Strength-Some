@@ -1,17 +1,529 @@
-Sentence,Avg Prediction (ELMo+Single+LSTM+Attn),Partitive,Modification (A),Modification (P),Subjecthood
-Some cats were chasing the mouse.,5.525943935,FALSE,FALSE,FALSE,TRUE
-Some of the cats were chasing the mouse.,6.973603845,TRUE,FALSE,FALSE,TRUE
-Some cats in the backyard were chasing the mouse.,5.961904466,FALSE,FALSE,TRUE,TRUE
-Some black cats were chasing the mouse.,4.493804157,FALSE,TRUE,FALSE,TRUE
-The mouse was being chased by some cats.,3.322674811,FALSE,FALSE,FALSE,FALSE
-Some of the cats in the backyard were chasing the mouse.,4.342687249,TRUE,FALSE,TRUE,TRUE
-The mouse was being chased by some of the cats in the backyard.,5.944297552,TRUE,FALSE,TRUE,FALSE
-The mouse was being chased by some of the cats.,6.307440758,TRUE,FALSE,FALSE,FALSE
-Some black cats in the backyard were chasing the mouse.,5.34131515,FALSE,TRUE,TRUE,TRUE
-The mouse was being chased by some cats in the backyard. ,2.511463359,FALSE,FALSE,TRUE,FALSE
-The mouse was being chased by some black cats.,4.378816068,FALSE,TRUE,FALSE,FALSE
-The mouse was being chased by some black cats in the backyard.,4.20634073,FALSE,TRUE,TRUE,FALSE
-Some of the black cats in the backyard were chasing the mouse.,6.80410701,TRUE,TRUE,TRUE,TRUE
-The mouse was being chased by some of the black cats in the backyard.,5.685536444,TRUE,TRUE,TRUE,FALSE
-Some of the black cats were chasing the mouse.,6.056676388,TRUE,TRUE,FALSE,TRUE
-The mouse was being chased by some of the black cats.,6.753864408,TRUE,TRUE,FALSE,FALSE
+Sentence,Prediction on Best Model,Avg Prediction (ELMo+Single+LSTM+Attn),Partitive,Modification (A),Modification (P),Subjecthood
+Some cats were chasing the mouse.,3.95941228,5.525943935,FALSE,FALSE,FALSE,TRUE
+Some of the cats were chasing the mouse.,5.89052105,6.973603845,TRUE,FALSE,FALSE,TRUE
+Some cats in the backyard were chasing the mouse.,4.30917609,5.961904466,FALSE,FALSE,TRUE,TRUE
+Some black cats were chasing the mouse.,2.53349847,4.493804157,FALSE,TRUE,FALSE,TRUE
+The mouse was being chased by some cats.,2.05770168,3.322674811,FALSE,FALSE,FALSE,FALSE
+Some of the cats in the backyard were chasing the mouse.,5.67986536,4.342687249,TRUE,FALSE,TRUE,TRUE
+The mouse was being chased by some of the cats in the backyard.,4.78788996,5.944297552,TRUE,FALSE,TRUE,FALSE
+The mouse was being chased by some of the cats.,4.87708485,6.307440758,TRUE,FALSE,FALSE,FALSE
+Some black cats in the backyard were chasing the mouse.,3.50679433,5.34131515,FALSE,TRUE,TRUE,TRUE
+The mouse was being chased by some cats in the backyard. ,2.39379051,2.511463359,FALSE,FALSE,TRUE,FALSE
+The mouse was being chased by some black cats.,1.9861474,4.378816068,FALSE,TRUE,FALSE,FALSE
+The mouse was being chased by some black cats in the backyard.,2.17727911,4.20634073,FALSE,TRUE,TRUE,FALSE
+Some of the black cats in the backyard were chasing the mouse.,5.47417498,6.80410701,TRUE,TRUE,TRUE,TRUE
+The mouse was being chased by some of the black cats in the backyard.,4.36514163,5.685536444,TRUE,TRUE,TRUE,FALSE
+Some of the black cats were chasing the mouse.,5.71351671,6.056676388,TRUE,TRUE,FALSE,TRUE
+The mouse was being chased by some of the black cats.,4.51788735,6.753864408,TRUE,TRUE,FALSE,FALSE
+The mouse was chasing some cats.,2.5162279,,FALSE,FALSE,FALSE,FALSE
+The mouse was chasing some of the cats in the backyard.,5.17951536,,TRUE,FALSE,TRUE,FALSE
+The mouse was chasing some of the cats.,5.52791321,,TRUE,FALSE,FALSE,FALSE
+The mouse was chasing some cats in the backyard.,2.81220895,,FALSE,FALSE,TRUE,FALSE
+The mouse was chasing some black cats.,2.09423175,,FALSE,TRUE,FALSE,FALSE
+The mouse was chasing some black cats in the backyard.,2.57357335,,FALSE,TRUE,TRUE,FALSE
+The mouse was chasing some of the black cats in the backyard.,4.65038812,,TRUE,TRUE,TRUE,FALSE
+The mouse was chasing some of the black cats.,4.9953928,,TRUE,TRUE,FALSE,FALSE
+Some cats were being chased by the mouse.,4.51583815,,FALSE,FALSE,FALSE,TRUE
+Some of the cats were being chased by the mouse.,5.73439395,,TRUE,FALSE,FALSE,TRUE
+Some cats in the backyard were being chased by the mouse.,4.91586494,,FALSE,FALSE,TRUE,TRUE
+Some black cats were being chased by the mouse.,4.05141509,,FALSE,TRUE,FALSE,TRUE
+Some of the cats in the backyard were being chased by the mouse.,5.53909624,,TRUE,FALSE,TRUE,TRUE
+Some black cats in the backyard were being chased by the mouse.,4.55634201,,FALSE,TRUE,TRUE,TRUE
+Some of the black cats in the backyard were being chased by the mouse.,5.40379202,,TRUE,TRUE,TRUE,TRUE
+Some of the black cats were being chased by the mouse.,5.56198406,,TRUE,TRUE,FALSE,TRUE
+Alex collaborated with some people.,4.54288197,,FALSE,FALSE,FALSE,FALSE
+Alex collaborated with some people in his class.,4.82802689,,FALSE,FALSE,TRUE,FALSE
+Alex collaborated with some talented people.,4.1942749,,FALSE,TRUE,FALSE,FALSE
+Alex collaborated with some talented people in his class.,4.33352089,,FALSE,TRUE,TRUE,FALSE
+Alex collaborated with some of the people.,5.65314698,,TRUE,FALSE,FALSE,FALSE
+Alex collaborated with some of the people in his class.,5.26511681,,TRUE,FALSE,TRUE,FALSE
+Alex collaborated with some of the talented people.,5.0214045,,TRUE,TRUE,FALSE,FALSE
+Alex collaborated with some of the talented people in his class.,4.71819186,,TRUE,TRUE,TRUE,FALSE
+Some people collaborated with Alex.,5.01783466,,FALSE,FALSE,FALSE,TRUE
+Some people in his class collaborated with Alex.,5.58198261,,FALSE,FALSE,TRUE,TRUE
+Some talented people collaborated with Alex.,4.34493315,,FALSE,TRUE,FALSE,TRUE
+Some talented people in his class collaborated with Alex.,4.61602974,,FALSE,TRUE,TRUE,TRUE
+Some of the people collaborated with Alex.,5.59236383,,TRUE,FALSE,FALSE,TRUE
+Some of the people in his class collaborated with Alex.,5.6440661,,TRUE,FALSE,TRUE,TRUE
+Some of the talented people collaborated with Alex.,4.88961399,,TRUE,TRUE,FALSE,TRUE
+Some of the talented people in his class collaborated with Alex.,4.961362,,TRUE,TRUE,TRUE,TRUE
+The wind destroyed some vases.,4.34115303,,FALSE,FALSE,FALSE,FALSE
+The wind destroyed some ornate vases.,4.11896992,,FALSE,TRUE,FALSE,FALSE
+The wind destroyed some vases in the living room.,4.01464486,,FALSE,FALSE,TRUE,FALSE
+The wind destroyed some ornate vases in the living room.,3.6616379,,FALSE,TRUE,TRUE,FALSE
+The wind destroyed some of the vases.,6.05337119,,TRUE,FALSE,FALSE,FALSE
+The wind destroyed some of the ornate vases.,6.17275524,,TRUE,TRUE,FALSE,FALSE
+The wind destroyed some of the vases in the living room.,5.78132117,,TRUE,FALSE,TRUE,FALSE
+The wind destroyed some of the ornate vases in the living room.,5.74944079,,TRUE,TRUE,TRUE,FALSE
+Some vases were destroyed by the wind.,5.40649998,,FALSE,FALSE,FALSE,TRUE
+Some ornate vases were destroyed by the wind.,4.62640989,,FALSE,TRUE,FALSE,TRUE
+Some vases in the living room were destroyed by the wind.,4.77406514,,FALSE,FALSE,TRUE,TRUE
+Some ornate vases in the living room were destroyed by the wind.,4.5087235,,FALSE,TRUE,TRUE,TRUE
+Some of the vases were destroyed by the wind.,5.95400071,,TRUE,FALSE,FALSE,TRUE
+Some of the ornate vases were destroyed by the wind.,5.9623059,,TRUE,TRUE,FALSE,TRUE
+Some of the vases in the living room were destroyed by the wind.,5.50552857,,TRUE,FALSE,TRUE,TRUE
+Some of the ornate vases in the living room were destroyed by the wind.,5.55023992,,TRUE,TRUE,TRUE,TRUE
+The waiter poured some wine.,2.20543829,,FALSE,FALSE,FALSE,FALSE
+The waiter poured some white wine.,2.23543271,,FALSE,TRUE,FALSE,FALSE
+The waiter poured some wine that my friend really likes.,2.57125574,,FALSE,FALSE,TRUE,FALSE
+The waiter poured some white wine that my friend really likes.,2.54940253,,FALSE,TRUE,TRUE,FALSE
+The waiter poured some of the wine.,6.00234842,,TRUE,FALSE,FALSE,FALSE
+The waiter poured some of the white wine.,5.61613429,,TRUE,TRUE,FALSE,FALSE
+The waiter poured some of the wine that my friend really likes.,4.17671859,,TRUE,FALSE,TRUE,FALSE
+The waiter poured some of the white wine that my friend really likes.,3.48574865,,TRUE,TRUE,TRUE,FALSE
+Some wine was poured by the waiter.,2.59545785,,FALSE,FALSE,FALSE,TRUE
+Some white wine was poured by the waiter.,2.52050996,,FALSE,TRUE,FALSE,TRUE
+Some wine that my friend really likes was poured by the waiter.,2.87730867,,FALSE,FALSE,TRUE,TRUE
+Some white wine that my friend really likes was poured by the waiter.,2.84891355,,FALSE,TRUE,TRUE,TRUE
+Some of the wine was poured by the waiter.,6.04730225,,TRUE,FALSE,FALSE,TRUE
+Some of the white wine was poured by the waiter.,5.90165687,,TRUE,TRUE,FALSE,TRUE
+Some of the wine that my friend really likes was poured by the waiter.,5.13145983,,TRUE,FALSE,TRUE,TRUE
+Some of the white wine that my friend really likes was poured by the waiter.,4.5433991,,TRUE,TRUE,TRUE,TRUE
+The laywers negotiated some terms.,4.99167383,,FALSE,FALSE,FALSE,FALSE
+The lawyers negotiated some important terms.,2.72135055,,FALSE,TRUE,FALSE,FALSE
+The laywers negotiated some terms of the acquisition.,5.27626729,,FALSE,FALSE,TRUE,FALSE
+The lawyers negotiated some important terms of the acquisition.,3.82121557,,FALSE,TRUE,TRUE,FALSE
+The lawyers negotiated some of the terms.,6.18452585,,TRUE,FALSE,FALSE,FALSE
+The lawyers negotiated some of the important terms.,5.79808283,,TRUE,TRUE,FALSE,FALSE
+The lawyers negotiated some of the terms of the acuqisition.,5.93109608,,TRUE,FALSE,TRUE,FALSE
+The lawyers negotiated some of the important terms of the acquisition.,5.42595851,,TRUE,TRUE,TRUE,FALSE
+Some laywers negotiated the terms.,5.92095053,,FALSE,FALSE,FALSE,TRUE
+Some experienced laywers negotiated the terms.,5.56589222,,FALSE,TRUE,FALSE,TRUE
+Some laywers in the firm negotiated the terms.,5.6315577,,FALSE,FALSE,TRUE,TRUE
+Some experienced laywers in the firm negotiated the terms.,5.25509787,,FALSE,TRUE,TRUE,TRUE
+Some of the laywers negotiated the terms.,6.15387571,,TRUE,FALSE,FALSE,TRUE
+Some of the experienced laywers negotiated the terms.,5.99668896,,TRUE,TRUE,FALSE,TRUE
+Some of the laywers in the firm negotiated the terms.,5.91183174,,TRUE,FALSE,TRUE,TRUE
+Some of the experienced lawyers in the firm negotiated the terms.,5.86877227,,TRUE,TRUE,TRUE,TRUE
+The chef cut some salmon.,2.51332825,,FALSE,FALSE,FALSE,FALSE
+The chef cut some red salmon.,2.47809833,,FALSE,TRUE,FALSE,FALSE
+The chef cut some salmon from Alaska.,2.99244964,,FALSE,FALSE,TRUE,FALSE
+The chef cut some red salmon from Alaska.,2.89510208,,FALSE,TRUE,TRUE,FALSE
+The chef cut some of the salmon.,6.07077587,,TRUE,FALSE,FALSE,FALSE
+The chef cut some of the red salmon.,5.98905611,,TRUE,TRUE,FALSE,FALSE
+The chef cut some of the salmon from Alaksa.,5.86843646,,TRUE,FALSE,TRUE,FALSE
+The chef cut some of the red salmon from Alaska.,5.85726058,,TRUE,TRUE,TRUE,FALSE
+Some salmon was cut by the chef.,4.78282201,,FALSE,FALSE,FALSE,TRUE
+Some red salmon was cut by the chef.,3.97728866,,FALSE,TRUE,FALSE,TRUE
+Some salmon from Alaska was cut by the chef.,4.74103713,,FALSE,FALSE,TRUE,TRUE
+Some red salmon from Alaska was cut by the chef.,4.17915332,,FALSE,TRUE,TRUE,TRUE
+Some of the salmon was cut by the chef.,5.99343419,,TRUE,FALSE,FALSE,TRUE
+Some of the red salmon was cut by the chef.,5.95077848,,TRUE,TRUE,FALSE,TRUE
+Some of the salmon from Alaska was cut by the chef.,5.70422196,,TRUE,FALSE,TRUE,TRUE
+Some of the red salmon from Alaska was cut by the chef.,5.52432728,,TRUE,TRUE,TRUE,TRUE
+The general warned some soldiers.,3.73770589,,FALSE,FALSE,FALSE,FALSE
+The general warned some brave soldiers.,1.82082722,,FALSE,TRUE,FALSE,FALSE
+The general warned some soldiers who were conducting the midnight raid.,4.2327925,,FALSE,FALSE,TRUE,FALSE
+The general warned some brave soldiers who were conducting the midnight raid.,2.08139971,,FALSE,TRUE,TRUE,FALSE
+The general warned some of the soldiers.,6.02173293,,TRUE,FALSE,FALSE,FALSE
+The general warned some of the brave soldiers.,5.73566425,,TRUE,TRUE,FALSE,FALSE
+The general warned some of the soldiers who were conducting the midnight raid.,5.64569688,,TRUE,FALSE,TRUE,FALSE
+The general warned some of the brave soldiers who were conducting the midnight raid.,5.18511367,,TRUE,TRUE,TRUE,FALSE
+Some solidiers warned the general.,5.57852435,,FALSE,FALSE,FALSE,TRUE
+Some brave soldiers warned the general.,2.08308145,,FALSE,TRUE,FALSE,TRUE
+Some soldiers who were conducting the midnight raid warned the general.,4.56238413,,FALSE,FALSE,TRUE,TRUE
+Some brave soldiers who were conducting the midnight raid warned the general.,3.05750751,,FALSE,TRUE,TRUE,TRUE
+Some of the soliders warned the general.,6.03276575,,TRUE,FALSE,FALSE,TRUE
+Some of the brave soldiers warned the general.,5.48530543,,TRUE,TRUE,FALSE,TRUE
+Some of the soldiers who were conducting the midnight raid warned the general.,5.20407224,,TRUE,FALSE,TRUE,TRUE
+Some of the brave soldiers who were conducting the midnight raid warned the general.,4.70896435,,TRUE,TRUE,TRUE,TRUE
+Sarah returned some books.,3.86015874,,FALSE,FALSE,FALSE,FALSE
+Sarah returned some old books.,5.18055212,,FALSE,TRUE,FALSE,FALSE
+Sarah returned some books written by Camus.,4.89346921,,FALSE,FALSE,TRUE,FALSE
+Sarah returned some old books written by Camus.,4.90731728,,FALSE,TRUE,TRUE,FALSE
+Sarah returned some of the books.,6.10908318,,TRUE,FALSE,FALSE,FALSE
+Sarah returned some of the old books.,6.11839223,,TRUE,TRUE,FALSE,FALSE
+Sarah returned some of the books written by Camus.,5.70052373,,TRUE,FALSE,TRUE,FALSE
+Sarah returned some of the old books written by Camus.,5.70123148,,TRUE,TRUE,TRUE,FALSE
+Some books were returned by Sarah.,4.94994116,,FALSE,FALSE,FALSE,TRUE
+Some old books were returned by Sarah.,4.72340715,,FALSE,TRUE,FALSE,TRUE
+Some books written by Camus were returned by Sarah.,5.01964104,,FALSE,FALSE,TRUE,TRUE
+Some old books written by Camus were returned by Sarah.,4.76584041,,FALSE,TRUE,TRUE,TRUE
+Some of the books were returned by Sarah.,5.67587566,,TRUE,FALSE,FALSE,TRUE
+Some of the old books were returned by Sarah.,5.66404355,,TRUE,TRUE,FALSE,TRUE
+Some of the books written by Camus were returned by Sarah.,5.40624607,,TRUE,FALSE,TRUE,TRUE
+Some of the old books written by Camus were returned by Sarah.,5.31320059,,TRUE,TRUE,TRUE,TRUE
+Frank drank some beer.,2.23741183,,FALSE,FALSE,FALSE,FALSE
+Frank drank some stale beer.,2.28152138,,FALSE,TRUE,FALSE,FALSE
+Frank drank some beer that was left in the fridge.,2.84771568,,FALSE,FALSE,TRUE,FALSE
+Frank drank some stale beer that was left in the fridge.,2.74661911,,FALSE,TRUE,TRUE,FALSE
+Frank drank some of the beer.,6.16534054,,TRUE,FALSE,FALSE,FALSE
+Frank drank some of the stale beer.,6.00892162,,TRUE,TRUE,FALSE,FALSE
+Frank drank some of the beer that was left in the fridge.,5.30639458,,TRUE,FALSE,TRUE,FALSE
+Frank drank some of the stale beer that was left in the fridge.,5.11261284,,TRUE,TRUE,TRUE,FALSE
+Some beer was drunk by Frank.,2.39067531,,FALSE,FALSE,FALSE,TRUE
+Some stale beer was drunk by Frank.,2.44461471,,FALSE,TRUE,FALSE,TRUE
+Some beer that was left in the fridge was drunk by Frank.,3.53714603,,FALSE,FALSE,TRUE,TRUE
+Some stale beer that was left in the fridge was drunk by Frank.,3.39727008,,FALSE,TRUE,TRUE,TRUE
+Some of the beer was drunk by Frank.,5.92929506,,TRUE,FALSE,FALSE,TRUE
+Some of the stale beer was drunk by Frank.,5.861462,,TRUE,TRUE,FALSE,TRUE
+Some of the beer that was left in the fridge was drunk by Frank.,5.31020975,,TRUE,FALSE,TRUE,TRUE
+Some of the stale beer that was left in the fridge was drunk by Frank.,5.29187346,,TRUE,TRUE,TRUE,TRUE
+The magicians shuffled some cards.,2.85741973,,FALSE,FALSE,FALSE,FALSE
+The magicians shuffled some black cards.,3.02259266,,FALSE,TRUE,FALSE,FALSE
+The magicians shuffled some cards with dots.,4.47392344,,FALSE,FALSE,TRUE,FALSE
+The magicians shuffled some black cards with dots.,3.07875061,,FALSE,TRUE,TRUE,FALSE
+The magicians shuffled some of the cards.,5.98765135,,TRUE,FALSE,FALSE,FALSE
+The magicians shuffled some of the black cards.,5.94969022,,TRUE,TRUE,FALSE,FALSE
+The magicians shuffled some of the cards with dots.,5.92346716,,TRUE,FALSE,TRUE,FALSE
+The magicians shuffled some of the black cards with dots.,5.81594419,,TRUE,TRUE,TRUE,FALSE
+Some magicians shuffled the cards.,6.01781332,,FALSE,FALSE,FALSE,TRUE
+Some entertaining magicians shuffled the cards.,4.24771631,,FALSE,TRUE,FALSE,TRUE
+Some magicians with top hats shuffled the cards.,5.67673111,,FALSE,FALSE,TRUE,TRUE
+Some entertaining magicians with top hats shuffled the cards.,2.67310208,,FALSE,TRUE,TRUE,TRUE
+Some of the magicians shuffled the cards.,6.07186091,,TRUE,FALSE,FALSE,TRUE
+Some of the entertaining magicians shuffled the cards.,5.9478277,,TRUE,TRUE,FALSE,TRUE
+Some of the magicians with top hats shuffled the cards.,5.84177423,,TRUE,FALSE,TRUE,TRUE
+Some of the entertaining magicians with top hats shuffled the cards.,5.67581987,,TRUE,TRUE,TRUE,TRUE
+The missiles sank some ships.,5.06270373,,FALSE,FALSE,FALSE,FALSE
+The missiles sank some small ships.,4.20720422,,FALSE,TRUE,FALSE,FALSE
+The missiles sank some ships without defense mechanisms.,5.33791947,,FALSE,FALSE,TRUE,FALSE
+The missiles sank some small ships without defense mechanisms.,4.62818408,,FALSE,TRUE,TRUE,FALSE
+The missiles sank some of the ships.,6.0264976,,TRUE,FALSE,FALSE,FALSE
+The missiles sank some of the small ships.,5.93978322,,TRUE,TRUE,FALSE,FALSE
+The missiles sank some of the ships without defense mechanisms.,6.02230763,,TRUE,FALSE,TRUE,FALSE
+The missiles sank some of the small ships without defense mechanisms.,5.80590951,,TRUE,TRUE,TRUE,FALSE
+Some missiles sank the ships.,4.99489141,,FALSE,FALSE,FALSE,TRUE
+Some exploding missiles sank the ships.,3.62947518,,FALSE,TRUE,FALSE,TRUE
+Some missiles from the fighter jet sank the ships.,3.79690492,,FALSE,FALSE,TRUE,TRUE
+Some exploding missiles from the fighter jet sank the ships.,2.85017741,,FALSE,TRUE,TRUE,TRUE
+Some of the missiles sank the ships.,5.93508506,,TRUE,FALSE,FALSE,TRUE
+Some of the exploding missiles sank the ships.,5.94861484,,TRUE,TRUE,FALSE,TRUE
+Some of the missiles from the fighter jet sank the ships.,5.31763804,,TRUE,FALSE,TRUE,TRUE
+Some of the exploding missiles from the fighter jet sank the ships.,5.23927677,,TRUE,TRUE,TRUE,TRUE
+The doctors called some patients.,4.92040682,,FALSE,FALSE,FALSE,FALSE
+The doctors called some former patients.,5.3694551,,FALSE,TRUE,FALSE,FALSE
+The doctors called some patients in New York.,4.65685797,,FALSE,FALSE,TRUE,FALSE
+The doctors called some former patients in New York.,4.88717496,,FALSE,TRUE,TRUE,FALSE
+The doctors called some of the patients.,5.84215224,,TRUE,FALSE,FALSE,FALSE
+The doctors called some of the former patients.,5.81445968,,TRUE,TRUE,FALSE,FALSE
+The doctors called some of the patients in New York.,5.40461528,,TRUE,FALSE,TRUE,FALSE
+The doctors called some of the former patients in New York.,5.43043244,,TRUE,TRUE,TRUE,FALSE
+Some doctors called the patients.,5.1062088,,FALSE,FALSE,FALSE,TRUE
+Some former doctors called the patients.,5.56981361,,FALSE,TRUE,FALSE,TRUE
+Some doctors in New York called the patients.,5.03104472,,FALSE,FALSE,TRUE,TRUE
+Some former doctors in New York called the patients.,5.19106424,,FALSE,TRUE,TRUE,TRUE
+Some of the doctors called the patients.,5.83341002,,TRUE,FALSE,FALSE,TRUE
+Some of the former doctors called the patients.,5.86288142,,TRUE,TRUE,FALSE,TRUE
+Some of the doctors in New York called the patients.,5.44376016,,TRUE,FALSE,TRUE,TRUE
+Some of the former doctors in New York called the patients. ,5.52053821,,TRUE,TRUE,TRUE,TRUE
+The artists performed some songs.,5.49214613,,FALSE,FALSE,FALSE,FALSE
+The artists performed some fast songs.,5.59876716,,FALSE,TRUE,FALSE,FALSE
+The artists performed some songs from their first album.,5.84601355,,FALSE,FALSE,TRUE,FALSE
+The artists performed some fast songs from their first album.,5.56799972,,FALSE,TRUE,TRUE,FALSE
+The artists performed some of the songs.,6.05019367,,TRUE,FALSE,FALSE,FALSE
+The artists performed some of the fast songs.,6.13491929,,TRUE,TRUE,FALSE,FALSE
+The artists performed some of the songs from their first album.,6.07206154,,TRUE,FALSE,TRUE,FALSE
+The artists performed some of the fast songs from their first album.,5.92304802,,TRUE,TRUE,TRUE,FALSE
+Some artists performed the songs.,6.12686121,,FALSE,FALSE,FALSE,TRUE
+Some upcoming artists performed the songs.,5.66426098,,FALSE,TRUE,FALSE,TRUE
+Some artists with multiple albums performed the songs.,5.82978404,,FALSE,FALSE,TRUE,TRUE
+Some upcoming artists with multiple albums performed the songs.,5.34406495,,FALSE,TRUE,TRUE,TRUE
+Some of the artists performed the songs.,6.07508922,,TRUE,FALSE,FALSE,TRUE
+Some of the upcoming artists performed the songs.,5.63982499,,TRUE,TRUE,FALSE,TRUE
+Some of the artists with multiple albums performed the songs.,5.77550721,,TRUE,FALSE,TRUE,TRUE
+Some of the upcoming artists with multiple albums performed the songs.,5.48720694,,TRUE,TRUE,TRUE,TRUE
+Congress impeached some presidents.,5.55283093,,FALSE,FALSE,FALSE,FALSE
+Congress impeached some corrupt presidents.,5.38638878,,FALSE,TRUE,FALSE,FALSE
+Congress impeached some president from the Republican party.,5.60904324,,FALSE,FALSE,TRUE,FALSE
+Congress impeached some corrupt president from the Republican party.,4.60079014,,FALSE,TRUE,TRUE,FALSE
+Congress impeached some of the presidents.,5.9242171,,TRUE,FALSE,FALSE,FALSE
+Congress impeached some of the corrupt presidents.,5.92446709,,TRUE,TRUE,FALSE,FALSE
+Congress impeached some of the president from the Republican party.,5.79581976,,TRUE,FALSE,TRUE,FALSE
+Congress impeached some of the corrupt presidents from the Republican party.,5.93792605,,TRUE,TRUE,TRUE,FALSE
+Some presidents were impeached by Congress.,5.8797003,,FALSE,FALSE,FALSE,TRUE
+Some corrupt presidents were impeached by Congress.,5.8287251,,FALSE,TRUE,FALSE,TRUE
+Some presidents from the Republican party were impeached by Congress.,6.01021552,,FALSE,FALSE,TRUE,TRUE
+Some corrupt presidents from the Republican party were impeached by Congress.,5.78365147,,FALSE,TRUE,TRUE,TRUE
+Some of the presidents were impeached by Congress.,6.06834006,,TRUE,FALSE,FALSE,TRUE
+Some of the corrupt presidents were impeached by Congress.,6.02746356,,TRUE,TRUE,FALSE,TRUE
+Some of the presidents from the Republican party were impeached by Congress.,6.0337317,,TRUE,FALSE,TRUE,TRUE
+Some of the corrupt presidents from the Republican party were impeached by Congress.,5.99727082,,TRUE,TRUE,TRUE,TRUE
+The researcher transcribed some conversations.,4.87715459,,FALSE,FALSE,FALSE,FALSE
+The researcher transcribed some recorded conversations.,5.00172246,,FALSE,TRUE,FALSE,FALSE
+The researcher transcribed some conversations that she collected while doing fieldwork.,4.26914859,,FALSE,FALSE,TRUE,FALSE
+The researcher transcribed some recorded conversations that she collected while doing fieldwork.,4.37795115,,FALSE,TRUE,TRUE,FALSE
+The researcher transcribed some of the conversations.,6.05565321,,TRUE,FALSE,FALSE,FALSE
+The researcher transcribed some of the recorded conversations.,6.00299573,,TRUE,TRUE,FALSE,FALSE
+The researcher transcribed some of the conversations that she collected while doing fieldwork.,5.22443378,,TRUE,FALSE,TRUE,FALSE
+The researcher transcribed some of the recorded conversations that she collected while doing fieldwork.,5.19389701,,TRUE,TRUE,TRUE,FALSE
+Some conversations were transcribed by the researcher.,5.40343797,,FALSE,FALSE,FALSE,TRUE
+Some recorded conversations were transcribed by the researcher.,5.51787925,,FALSE,TRUE,FALSE,TRUE
+Some conversations that she collected while doing fieldwork were transcribed by the researcher.,4.87391233,,FALSE,FALSE,TRUE,TRUE
+Some recorded conversations that she collected while doing fieldwork were transcribed by the researcher.,4.86414337,,FALSE,TRUE,TRUE,TRUE
+Some of the conversations were transcribed by the researcher.,5.89553463,,TRUE,FALSE,FALSE,TRUE
+Some of the recorded conversations were transcribed by the researcher.,5.93946171,,TRUE,TRUE,FALSE,TRUE
+Some of the conversations that she collected while doing fieldwork were transcribed by the researcher.,5.22428036,,TRUE,FALSE,TRUE,TRUE
+Some of the recorded conversations that she collected while doing fieldwork were transcribed by the researcher.,5.26908398,,TRUE,TRUE,TRUE,TRUE
+The psychoanalysts hypnotized some clients.,5.48221838,,FALSE,FALSE,FALSE,FALSE
+The psychoanalysts hypnotized some young clients.,5.406353,,FALSE,TRUE,FALSE,FALSE
+The psychoanalysts hypnotized some clients with depression.,5.38581479,,FALSE,FALSE,TRUE,FALSE
+The psychoanalysts hypnotized some young clients with depression.,5.39320731,,FALSE,TRUE,TRUE,FALSE
+The psychoanalysts hypnotized some clients.,5.50355482,,TRUE,FALSE,FALSE,FALSE
+The psychoanalysts hypnotized some young clients.,5.40582514,,TRUE,TRUE,FALSE,FALSE
+The psychoanalysts hypnotized some clients with depression.,5.41943502,,TRUE,FALSE,TRUE,FALSE
+The psychoanalysts hypnotized some of the young clients with depression.,5.56595731,,TRUE,TRUE,TRUE,FALSE
+Some psychoanalysists hypnotized the clients.,5.55681777,,FALSE,FALSE,FALSE,TRUE
+Some young psychoanalysts hypnotized the clients.,5.06057549,,FALSE,TRUE,FALSE,TRUE
+Some psychoanalysts in training hypnotized the clients.,5.45357561,,FALSE,FALSE,TRUE,TRUE
+Some young psychoanalysts in training hypnotized the clients.,5.20035648,,FALSE,TRUE,TRUE,TRUE
+Some of the psychoanalysists hypnotized the clients.,5.72265983,,TRUE,FALSE,FALSE,TRUE
+Some of the young psychoanalysts hypnotized the clients.,5.54773259,,TRUE,TRUE,FALSE,TRUE
+Some of the psychoanalysts in training hypnotized the clients.,5.61903787,,TRUE,FALSE,TRUE,TRUE
+Some of the young psychoanalysts in training hypnotized the clients.,5.41389465,,TRUE,TRUE,TRUE,TRUE
+The critics read some chapters.,4.97517395,,FALSE,FALSE,FALSE,FALSE
+The critics read some early chapters.,5.45404196,,FALSE,TRUE,FALSE,FALSE
+The ciritics read some chapters of the novel.,5.47195017,,FALSE,FALSE,TRUE,FALSE
+The critics read some early chapters of the novel.,5.43895936,,FALSE,TRUE,TRUE,FALSE
+The critics read some of the chapters.,5.67800856,,TRUE,FALSE,FALSE,FALSE
+The critics read some of the early chapters.,6.00158381,,TRUE,TRUE,FALSE,FALSE
+The ciritics read some of the chapters of the novel.,5.72210693,,TRUE,FALSE,TRUE,FALSE
+The critics read some of the early chapters of the novel.,5.88634396,,TRUE,TRUE,TRUE,FALSE
+Some chapters were read by the critics.,5.31978703,,FALSE,FALSE,FALSE,TRUE
+Some early chapters were read by the critics.,5.50979686,,FALSE,TRUE,FALSE,TRUE
+Some chapters of the book were read by the critics.,5.3361367,,FALSE,FALSE,TRUE,TRUE
+Some early chapters of the book were read by the critics.,5.41973221,,FALSE,TRUE,TRUE,TRUE
+Some of the chapters were read by the critics.,5.68272388,,TRUE,FALSE,FALSE,TRUE
+Some of the early chapters were read by the critics.,5.82264721,,TRUE,TRUE,FALSE,TRUE
+Some of the chapters of the book were read by the critics.,5.53333485,,TRUE,FALSE,TRUE,TRUE
+Some of the early chapters of the book were read by the critics.,5.68005991,,TRUE,TRUE,TRUE,TRUE
+The farmers milked some goats.,2.95454001,,FALSE,FALSE,FALSE,FALSE
+The farmers milked some brown goats.,2.78118688,,FALSE,TRUE,FALSE,FALSE
+The farmers milked some goats in the mountains.,3.29516304,,FALSE,FALSE,TRUE,FALSE
+The farmers milked some brown goats in the mountains.,3.11981201,,FALSE,TRUE,TRUE,FALSE
+The farmers milked some of the goats.,5.71382928,,TRUE,FALSE,FALSE,FALSE
+The farmers milked some of the brown goats.,5.5168643,,TRUE,TRUE,FALSE,FALSE
+The farmers milked some of the goats in the mountains.,5.29862118,,TRUE,FALSE,TRUE,FALSE
+The farmers milked some of the brown goats in the mountains.,5.05950868,,TRUE,TRUE,TRUE,FALSE
+Some farmers milked the goats.,4.971946,,FALSE,FALSE,FALSE,TRUE
+Some organic farmers milked the goats.,5.23500454,,FALSE,TRUE,FALSE,TRUE
+Some farmers in the mountains milked the goats.,5.2239449,,FALSE,FALSE,TRUE,TRUE
+Some organic farmers in the mountains milked the goats.,4.24836862,,FALSE,TRUE,TRUE,TRUE
+Some of the farmers milked the goats.,5.85174489,,TRUE,FALSE,FALSE,TRUE
+Some of the organic farmers milked the goats.,5.75486994,,TRUE,TRUE,FALSE,TRUE
+Some of the farmers in the mountains milked the goats.,5.59623051,,TRUE,FALSE,TRUE,TRUE
+Some of the organic farmers in the mountains milked the goats.,5.27016258,,TRUE,TRUE,TRUE,TRUE
+The baker kneaded some dough.,2.40818548,,FALSE,FALSE,FALSE,FALSE
+The baker kneaded some gluten-free dough.,2.56729627,,FALSE,TRUE,FALSE,FALSE
+The baker kneaded some dough made out of spelt.,2.16196048,,FALSE,FALSE,TRUE,FALSE
+The baker kneaded some gluten-free dough made out of spelt.,2.42671329,,FALSE,TRUE,TRUE,FALSE
+The baker kneaded some of the dough.,5.8437798,,TRUE,FALSE,FALSE,FALSE
+The baker kneaded some of the gluten-free dough.,5.459445,,TRUE,TRUE,FALSE,FALSE
+The baker kneaded some of the dough made out of spelt.,5.51995277,,TRUE,FALSE,TRUE,FALSE
+The baker kneaded some of the gluten-free dough made out of spelt.,4.8211658,,TRUE,TRUE,TRUE,FALSE
+Some dough was kneaded by the baker.,3.65189451,,FALSE,FALSE,FALSE,TRUE
+Some gluten-free dough was kneaded by the baker.,3.87499905,,FALSE,TRUE,FALSE,TRUE
+Some dough made out of spelt was kneaded by the baker.,2.76320642,,FALSE,FALSE,TRUE,TRUE
+Some gluten-free dough made out of spelt was kneaded by the baker.,2.96634477,,FALSE,TRUE,TRUE,TRUE
+Some of the dough was kneaded by the baker.,5.88153064,,TRUE,FALSE,FALSE,TRUE
+Some of the gluten-free dough was kneaded by the baker.,5.67199254,,TRUE,TRUE,FALSE,TRUE
+Some of the dough made out of spelt was kneaded by the baker.,5.67618644,,TRUE,FALSE,TRUE,TRUE
+Some of the gluten-free dough made out of spelt was kneaded by the baker.,5.11839426,,TRUE,TRUE,TRUE,TRUE
+The guards reported some inmates.,4.96684694,,FALSE,FALSE,FALSE,FALSE
+The guards reported some violent inmates.,5.14115512,,FALSE,TRUE,FALSE,FALSE
+The guards reported some inmates in the high-security prison.,5.36361897,,FALSE,FALSE,TRUE,FALSE
+The guards reported some violent inmates in the high-security prison.,4.40542591,,FALSE,TRUE,TRUE,FALSE
+The guards reported some of the inmates.,6.05083811,,TRUE,FALSE,FALSE,FALSE
+The guards reported some of the violent inmates.,6.07654083,,TRUE,TRUE,FALSE,FALSE
+The guards reported some of the inmates in the high-security prison.,5.90551209,,TRUE,FALSE,TRUE,FALSE
+The guards reported some of the violent inmates in the high-security prison.,5.83874404,,TRUE,TRUE,TRUE,FALSE
+Some inmates reported the guards.,5.88971961,,FALSE,FALSE,FALSE,TRUE
+Some violent inmates reported the guards.,5.82633936,,FALSE,TRUE,FALSE,TRUE
+Some inmates in the high-security prison reported the guards.,5.89137185,,FALSE,FALSE,TRUE,TRUE
+Some violent inmates in the high-security prison reported the guards.,5.75800419,,FALSE,TRUE,TRUE,TRUE
+Some of the inmates reported the guards.,6.02383614,,TRUE,FALSE,FALSE,TRUE
+Some of the violent inmates reported the guards.,6.02264345,,TRUE,TRUE,FALSE,TRUE
+Some of the inmates in the high-security prison reported the guards.,5.97384763,,TRUE,FALSE,TRUE,TRUE
+Some of the violent inmates in the high-security prison reported the guards.,5.88426793,,TRUE,TRUE,TRUE,TRUE
+The managers instructed some sales representatives about the new project management tool.,5.01428807,,FALSE,FALSE,FALSE,FALSE
+The managers instructed some eager sales representatives about the new project management tool.,4.22775173,,FALSE,TRUE,FALSE,FALSE
+The managers instructed some sales representatives in the company about the new project management tool.,4.80291569,,FALSE,FALSE,TRUE,FALSE
+The managers instructed some eager sales representatives in the company about the new project management tool.,4.23502159,,FALSE,TRUE,TRUE,FALSE
+The managers instructed some of the sales representatives about the new project management tool.,5.54041731,,TRUE,FALSE,FALSE,FALSE
+The managers instructed some of the eager sales representatives about the new project management tool.,5.4540416,,TRUE,TRUE,FALSE,FALSE
+The managers instructed some of the sales representatives in the company about the new project management tool.,5.22724938,,TRUE,FALSE,TRUE,FALSE
+The managers instructed some of the eager sales representatives in the company about the new project management tool.,5.08610225,,TRUE,TRUE,TRUE,FALSE
+Some managers instructed the sales representattives about the new project management tool.,5.41434205,,FALSE,FALSE,FALSE,TRUE
+Some eager managers instructed the sales representattives about the new project management tool. ,5.07729959,,FALSE,TRUE,FALSE,TRUE
+Some managers in the company instructed the sales representattives about the new project management tool. ,5.34698248,,FALSE,FALSE,TRUE,TRUE
+Some eager managers in the company instructed the sales representattives about the new project management tool. ,4.73244619,,FALSE,TRUE,TRUE,TRUE
+Some of the managers instructed the sales representattives about the new project management tool.,5.62048483,,TRUE,FALSE,FALSE,TRUE
+Some of the eager managers instructed the sales representattives about the new project management tool. ,5.56016159,,TRUE,TRUE,FALSE,TRUE
+Some of the managers in the company instructed the sales representattives about the new project management tool. ,5.44746447,,TRUE,FALSE,TRUE,TRUE
+Some of the eager managers in the company instructed the sales representatives about the new project management tool.,5.32598257,,TRUE,TRUE,TRUE,TRUE
+The conductor informed some passengers about the delay.,5.14734066,,FALSE,FALSE,FALSE,FALSE
+The conductor informed some impatient passengers about the delay.,4.20603728,,FALSE,TRUE,FALSE,FALSE
+The conductor informed some passengers in the bike car about the delay.,5.12077284,,FALSE,FALSE,TRUE,FALSE
+The conductor informed some impatient passengers in the bike car about the delay.,4.13822746,,FALSE,TRUE,TRUE,FALSE
+The conductor informed some of the passengers about the delay.,5.84461701,,TRUE,FALSE,FALSE,FALSE
+The conductor informed some of the impatient passengers about the delay.,5.85947502,,TRUE,TRUE,FALSE,FALSE
+The conductor informed some of the passengers in the bike car about the delay.,5.61800146,,TRUE,FALSE,TRUE,FALSE
+The conductor informed some of the impatient passengers in the bike car about the delay.,5.54711676,,TRUE,TRUE,TRUE,FALSE
+Some passengers were informed about the delay by the conductor.,5.45287251,,FALSE,FALSE,FALSE,TRUE
+Some impatient passengers were informed about the delay by the conductor.,5.35852385,,FALSE,TRUE,FALSE,TRUE
+Some passengers in the bike car were informed about the delay by the conductor.,5.30600619,,FALSE,FALSE,TRUE,TRUE
+Some impatient passengers in the bike car were informed about the delay by the conductor.,5.16401362,,FALSE,TRUE,TRUE,TRUE
+Some of the passengers were informed about the delay by the conductor.,5.77199996,,TRUE,FALSE,FALSE,TRUE
+Some of the impatient passengers were informed about the delay by the conductor.,5.81736004,,TRUE,TRUE,FALSE,TRUE
+Some of the passengers in the bike car were informed about the delay by the conductor.,5.60647154,,TRUE,FALSE,TRUE,TRUE
+Some of the impatient passengers in the bike car were informed about the delay by the conductor.,5.61516511,,TRUE,TRUE,TRUE,TRUE
+Some chemists oxidized the metal.,5.71198356,,FALSE,FALSE,FALSE,FALSE
+Some brilliant chemists oxidized the metal.,4.37858021,,FALSE,TRUE,FALSE,FALSE
+Some chemists in the lab oxidized the metal.,5.22760308,,FALSE,FALSE,TRUE,FALSE
+Some brilliant chemists in the lab oxidized the metal.,4.0222981,,FALSE,TRUE,TRUE,FALSE
+Some of the chemists oxidized the metal.,5.83684218,,TRUE,FALSE,FALSE,FALSE
+Some of the brilliant chemists oxidized the metal.,5.29637671,,TRUE,TRUE,FALSE,FALSE
+Some of the chemists in the lab oxidized the metal.,5.43947291,,TRUE,FALSE,TRUE,FALSE
+Some of the brilliant chemists in the lab oxidized the metal.,5.05284607,,TRUE,TRUE,TRUE,FALSE
+The metal was oxidized by some chemists.,5.15265644,,FALSE,FALSE,FALSE,TRUE
+The metal was oxidized by some brilliant chemists.,3.64219582,,FALSE,TRUE,FALSE,TRUE
+The metal was oxidized by some chemists in the lab.,4.40486693,,FALSE,FALSE,TRUE,TRUE
+The metal was oxidized by some brilliant chemists in the lab.,2.83508265,,FALSE,TRUE,TRUE,TRUE
+The metal was oxidized by some of the chemists.,5.35997796,,TRUE,FALSE,FALSE,TRUE
+The metal was oxidized by some of the brilliant chemists.,4.74282277,,TRUE,TRUE,FALSE,TRUE
+The metal was oxidized by some of the chemists in the lab.,4.91325891,,TRUE,FALSE,TRUE,TRUE
+The metal was oxidized by some of the brilliant chemists in the lab.,4.4344517,,TRUE,TRUE,TRUE,TRUE
+Some pirates found the treasure.,2.64410722,,FALSE,FALSE,FALSE,FALSE
+Some adventurous pirates found the treasure.,2.4690448,,FALSE,TRUE,FALSE,FALSE
+Some pirates on the boat found the treasure.,3.22946286,,FALSE,FALSE,TRUE,FALSE
+Some adventurous pirates on the boat found the treasure.,2.96623534,,FALSE,TRUE,TRUE,FALSE
+Some of the pirates found the treasure.,6.01460111,,TRUE,FALSE,FALSE,FALSE
+Some of the adventurous pirates found the treasure.,5.72375774,,TRUE,TRUE,FALSE,FALSE
+Some of the pirates on the boat found the treasure.,5.5240612,,TRUE,FALSE,TRUE,FALSE
+Some of the adventurous pirates on the boat found the treasure.,5.32881999,,TRUE,TRUE,TRUE,FALSE
+The treasure was found by some pirates.,3.63715005,,FALSE,FALSE,FALSE,TRUE
+The treasure was found by some adventurous pirates.,2.1215657,,FALSE,TRUE,FALSE,TRUE
+The treasure was found by some pirates on the boat.,4.06846929,,FALSE,FALSE,TRUE,TRUE
+The treasure was found by some adventurous pirates on the boat.,2.77687103,,FALSE,TRUE,TRUE,TRUE
+The treasure was found by some of the pirates.,5.56859696,,TRUE,FALSE,FALSE,TRUE
+The treasure was found by some of the adventurous pirates.,5.24283266,,TRUE,TRUE,FALSE,TRUE
+The treasure was found by some of the pirates on the boat.,5.5120914,,TRUE,FALSE,TRUE,TRUE
+The treasure was found by some of the adventurous pirates on the boat.,5.24073732,,TRUE,TRUE,TRUE,TRUE
+Some con artists tricked the residents of the retirement home.,4.9325937,,FALSE,FALSE,FALSE,FALSE
+Some mischievous con artists tricked the residents of the retirement home.,3.5235914,,FALSE,TRUE,FALSE,FALSE
+Some con artists at the casino tricked the residents of the retirement home.,4.76888382,,FALSE,FALSE,TRUE,FALSE
+Some mischievous con artists at the casino tricked the residents of the retirement home.,3.81962931,,FALSE,TRUE,TRUE,FALSE
+Some of the con artists tricked the residents of the retirement home.,5.86834991,,TRUE,FALSE,FALSE,FALSE
+Some of the mischievous con artists tricked the residents of the retirement home.,5.54303908,,TRUE,TRUE,FALSE,FALSE
+Some of the con artists at the casino tricked the residents of the retirement home.,5.78518605,,TRUE,FALSE,TRUE,FALSE
+Some of the mischievous con artists at the casino tricked the residents of the retirement home.,5.40990603,,TRUE,TRUE,TRUE,FALSE
+The residents of the retirement home were tricked by some con artists.,3.28693026,,FALSE,FALSE,FALSE,TRUE
+The residents of the retirement home were tricked by some mischievous con artists.,2.35534704,,FALSE,TRUE,FALSE,TRUE
+The residents of the retirement home were tricked by some con artists at the casino.,4.02244723,,FALSE,FALSE,TRUE,TRUE
+The residents of the retirement home were tricked by some mischievous con artists at the casino.,2.90604246,,FALSE,TRUE,TRUE,TRUE
+The residents of the retirement home were tricked by some of the con artists.,5.38394082,,TRUE,FALSE,FALSE,TRUE
+The residents of the retirement home were tricked by some of the mischievous con artists.,4.97691774,,TRUE,TRUE,FALSE,TRUE
+The residents of the retirement home were tricked by some of the con artists at the casino.,5.31421375,,TRUE,FALSE,TRUE,TRUE
+The residents of the retirement home were tricked by some of the mischievous con artists at the casino.,4.91827393,,TRUE,TRUE,TRUE,TRUE
+Some recruiters hired graduate students as interns.,5.63806438,,FALSE,FALSE,FALSE,FALSE
+Some persistent recruiters hired graduate students as interns.,5.67872882,,FALSE,TRUE,FALSE,FALSE
+Some recruiters at the conference hired graduate students as interns.,5.43640697,,FALSE,FALSE,TRUE,FALSE
+Some persistent recruiters at the conference hired graduate students as interns.,5.29966009,,FALSE,TRUE,TRUE,FALSE
+Some of the recruiters hired graduate students as interns.,5.87463486,,TRUE,FALSE,FALSE,FALSE
+Some of the persistent recruiters hired graduate students as interns.,5.85153925,,TRUE,TRUE,FALSE,FALSE
+Some of the recruiters at the conference hired graduate students as interns.,5.70420551,,TRUE,FALSE,TRUE,FALSE
+Some of the persistent recruiters at the conference hired graduate students as interns.,5.64800537,,TRUE,TRUE,TRUE,FALSE
+Graduate students were hired as interns by some recruiters.,5.61853361,,FALSE,FALSE,FALSE,TRUE
+Graduate students were hired as interns by some persistent recruiters.,5.61095476,,FALSE,TRUE,FALSE,TRUE
+Graduate students were hired as interns by some recruiters at the conference.,5.40241945,,FALSE,FALSE,TRUE,TRUE
+Graduate students were hired as interns by some persistent recruiters at the conference.,5.21323395,,FALSE,TRUE,TRUE,TRUE
+Graduate students were hired as interns by some of the recruiters.,5.7991339,,TRUE,FALSE,FALSE,TRUE
+Graduate students were hired as interns by some of the persistent recruiters.,5.7990334,,TRUE,TRUE,FALSE,TRUE
+Graduate students were hired as interns by some of the recruiters at the conference.,5.55432153,,TRUE,FALSE,TRUE,TRUE
+Graduate students were hired as interns by some of the persistent recruiters at the conference.,5.38109195,,TRUE,TRUE,TRUE,TRUE
+Some professors supported the petition.,5.2400099,,FALSE,FALSE,FALSE,FALSE
+Some established professors supported the petition.,5.39694417,,FALSE,TRUE,FALSE,FALSE
+Some professors in the department supported the petition.,5.12755024,,FALSE,FALSE,TRUE,FALSE
+Some established professors in the department supported the petition.,5.23759305,,FALSE,TRUE,TRUE,FALSE
+Some of the professors supported the petition.,5.75765014,,TRUE,FALSE,FALSE,FALSE
+Some of the established professors supported the petition.,5.71878707,,TRUE,TRUE,FALSE,FALSE
+Some of the professors in the department supported the petition.,5.45394719,,TRUE,FALSE,TRUE,FALSE
+Some of the established professors in the department supported the petition.,5.49605322,,TRUE,TRUE,TRUE,FALSE
+The petition was supported by some professors.,5.28099835,,FALSE,FALSE,FALSE,TRUE
+The petition was supported by some established professors.,5.40925086,,FALSE,TRUE,FALSE,TRUE
+The petition was supported by some professors in the department.,5.32188022,,FALSE,FALSE,TRUE,TRUE
+The petition was supported by some established professors in the department.,5.33183515,,FALSE,TRUE,TRUE,TRUE
+The petition was supported by some of the professors.,5.79202998,,TRUE,FALSE,FALSE,TRUE
+The petition was supported by some of the established professors.,5.76597929,,TRUE,TRUE,FALSE,TRUE
+The petition was supported by some of the professors in the department.,5.63194144,,TRUE,FALSE,TRUE,TRUE
+The petition was supported by some of the established professors in the department.,5.65874922,,TRUE,TRUE,TRUE,TRUE
+Some race car enthusiasts polished the winner's car.,5.31291163,,FALSE,FALSE,FALSE,FALSE
+Some middle-aged race car enthusiasts polished the winner's car.,5.28856683,,FALSE,TRUE,FALSE,FALSE
+Some race car enthusiasts from Indiana polished the winner's car.,4.34519458,,FALSE,FALSE,TRUE,FALSE
+Some middle-aged race car enthusiasts from Indiana polished the winner's car.,3.75988078,,FALSE,TRUE,TRUE,FALSE
+Some of the race car enthusiasts polished the winner's car.,5.61232519,,TRUE,FALSE,FALSE,FALSE
+Some of the middle-aged race car enthusiasts polished the winner's car.,5.54078245,,TRUE,TRUE,FALSE,FALSE
+Some of the race car enthusiasts from Indiana polished the winner's car.,5.0813812,,TRUE,FALSE,TRUE,FALSE
+Some of the middle-aged race car enthusiasts from Indiana polished the winner's car.,5.06564987,,TRUE,TRUE,TRUE,FALSE
+The winner's car was polished by some race car enthusiasts.,5.05309284,,FALSE,FALSE,FALSE,TRUE
+The winner's car was polished by some middle-aged race car enthusiasts.,4.68825197,,FALSE,TRUE,FALSE,TRUE
+The winner's car was polished by some race car enthusiasts from Indiana.,3.96586174,,FALSE,FALSE,TRUE,TRUE
+The winner's car was polished by some middle-aged race car enthusiasts from Indiana.,3.08240467,,FALSE,TRUE,TRUE,TRUE
+The winner's car was polished by some of the race car enthusiasts.,5.37785435,,TRUE,FALSE,FALSE,TRUE
+The winner's car was polished by some of the middle-aged race car enthusiasts.,5.32253718,,TRUE,TRUE,FALSE,TRUE
+The winner's car was polished by some of the race car enthusiasts from Indiana.,4.87389874,,TRUE,FALSE,TRUE,TRUE
+The winner's car was polished by some of the middle-aged race car enthusiasts from Indiana.,4.66804421,,TRUE,TRUE,TRUE,TRUE
+Some movers loaded the standing desks onto the truck.,4.7538749,,FALSE,FALSE,FALSE,FALSE
+Some muscular movers loaded the standing desks onto the truck.,3.25258547,,FALSE,TRUE,FALSE,FALSE
+Some movers that were hired by the startup loaded the standing desks onto the truck.,3.83910751,,FALSE,FALSE,TRUE,FALSE
+Some muscular movers that were hired by the startup loaded the standing desks onto the truck.,2.98186314,,FALSE,TRUE,TRUE,FALSE
+Some of the movers loaded the standing desks onto the truck.,5.81120527,,TRUE,FALSE,FALSE,FALSE
+Some of the muscular movers loaded the standing desks onto the truck.,5.77315474,,TRUE,TRUE,FALSE,FALSE
+Some of the movers that were hired by the startup loaded the standing desks onto the truck.,5.49924755,,TRUE,FALSE,TRUE,FALSE
+Some of the muscular movers that were hired by the startup loaded the standing desks onto the truck.,5.42795765,,TRUE,TRUE,TRUE,FALSE
+The standing desks were loaded onto the truck by some movers.,3.51728731,,FALSE,FALSE,FALSE,TRUE
+The standing desks were loaded onto the truck by some muscular movers.,2.49440974,,FALSE,TRUE,FALSE,TRUE
+The standing desks were loaded onto the truck by some movers that were hired by the startup.,3.62972033,,FALSE,FALSE,TRUE,TRUE
+The standing desks were loaded onto the truck by some muscular movers that were hired by the startup.,2.76799649,,FALSE,TRUE,TRUE,TRUE
+The standing desks were loaded onto the truck by some of the movers.,5.78644562,,TRUE,FALSE,FALSE,TRUE
+The standing desks were loaded onto the truck by some of the muscular movers.,5.70255721,,TRUE,TRUE,FALSE,TRUE
+The standing desks were loaded onto the truck by some of the movers that were hired by the startup.,5.1841141,,TRUE,FALSE,TRUE,TRUE
+The standing desks were loaded onto the truck by some of the muscular movers that were hired by the startup.,4.98122215,,TRUE,TRUE,TRUE,TRUE
+Some committee members congratulated her on the award.,4.49180627,,FALSE,FALSE,FALSE,FALSE
+Some distinguished committee members congratulated her on the award.,4.59616673,,FALSE,TRUE,FALSE,FALSE
+Some committee members from abroad congratulated her on the award.,4.12566543,,FALSE,FALSE,TRUE,FALSE
+Some distinguished committee members from abroad congratulated her on the award.,4.16559958,,FALSE,TRUE,TRUE,FALSE
+Some of the committee members congratulated her on the award.,5.08087802,,TRUE,FALSE,FALSE,FALSE
+Some of the distinguished committee members congratulated her on the award.,5.20276225,,TRUE,TRUE,FALSE,FALSE
+Some of the committee members from abroad congratulated her on the award.,4.77988446,,TRUE,FALSE,TRUE,FALSE
+Some of the distinguished committee members from abroad congratulated her on the award.,4.82324076,,TRUE,TRUE,TRUE,FALSE
+She was congratulated on the award by some committee members.,4.71066022,,FALSE,FALSE,FALSE,TRUE
+She was congratulated on the award by some distinguished committee members.,4.75763214,,FALSE,TRUE,FALSE,TRUE
+She was congratulated on the award by some committee members from abroad.,4.45801473,,FALSE,FALSE,TRUE,TRUE
+She was congratulated on the award by some distinguished committee members from abroad.,4.22105408,,FALSE,TRUE,TRUE,TRUE
+She was congratulated on the award by some of the committee members.,5.14835739,,TRUE,FALSE,FALSE,TRUE
+She was congratulated on the award by some of the distinguished committee members.,5.22058499,,TRUE,TRUE,FALSE,TRUE
+She was congratulated on the award by some of the committee members from abroad.,5.02621746,,TRUE,FALSE,TRUE,TRUE
+She was congratulated on the award by some of the distinguished committee members from abroad.,4.80363059,,TRUE,TRUE,TRUE,TRUE
+Some stations televised the soccer cup.,5.00310326,,FALSE,FALSE,FALSE,FALSE
+Some international stations televised the soccer cup.,4.31843114,,FALSE,TRUE,FALSE,FALSE
+Some stations in South America televised the soccer cup.,4.51248503,,FALSE,FALSE,TRUE,FALSE
+Some international stations in South America televised the soccer cup.,4.18883681,,FALSE,TRUE,TRUE,FALSE
+Some of the stations televised the soccer cup.,5.72459924,,TRUE,FALSE,FALSE,FALSE
+Some of the international stations televised the soccer cup.,5.33390403,,TRUE,TRUE,FALSE,FALSE
+Some of the stations in South America televised the soccer cup.,4.96895373,,TRUE,FALSE,TRUE,FALSE
+Some of the international stations in South America televised the soccer cup.,4.83621621,,TRUE,TRUE,TRUE,FALSE
+The soccer cup was televised by some stations.,4.68378878,,FALSE,FALSE,FALSE,TRUE
+The soccer cup was televised by some international stations.,4.57499194,,FALSE,TRUE,FALSE,TRUE
+The soccer cup was televised by some stations in South America.,4.57750714,,FALSE,FALSE,TRUE,TRUE
+The soccer cup was televised by some international stations in South America.,4.44935691,,FALSE,TRUE,TRUE,TRUE
+The soccer cup was televised by some of the stations.,5.30982602,,TRUE,FALSE,FALSE,TRUE
+The soccer cup was televised by some of the international stations.,5.08150995,,TRUE,TRUE,FALSE,TRUE
+The soccer cup was televised by some of the stations in South America.,4.96840334,,TRUE,FALSE,TRUE,TRUE
+The soccer cup was televised by some of the international stations in South America.,4.95130944,,TRUE,TRUE,TRUE,TRUE
+Some investors excessively remunerated the brokers.,5.8296746,,FALSE,FALSE,FALSE,FALSE
+Some wealthy investors excessively remunerated the brokers.,5.93913162,,FALSE,TRUE,FALSE,FALSE
+Some investors of the fund excessively remunerated the brokers.,5.87313962,,FALSE,FALSE,TRUE,FALSE
+Some wealthy investors of the fund excessively remunerated the brokers.,5.90199375,,FALSE,TRUE,TRUE,FALSE
+Some of the investors excessively remunerated the brokers.,5.94935083,,TRUE,FALSE,FALSE,FALSE
+Some of the wealthy investors excessively remunerated the brokers.,5.94569945,,TRUE,TRUE,FALSE,FALSE
+Some of the investors of the fund excessively remunerated the brokers.,5.96308696,,TRUE,FALSE,TRUE,FALSE
+Some of the wealthy investors of the fund excessively remunerated the brokers.,5.90427792,,TRUE,TRUE,TRUE,FALSE
+The brokers were excessively remunerated by some investors.,5.58790421,,FALSE,FALSE,FALSE,TRUE
+The brokers were excessively remunerated by some wealthy investors.,5.6271503,,FALSE,TRUE,FALSE,TRUE
+The brokers were excessively remunerated by some investors of the fund.,5.66400671,,FALSE,FALSE,TRUE,TRUE
+The brokers were excessively remunerated by some wealthy investors of the fund.,5.62482858,,FALSE,TRUE,TRUE,TRUE
+The brokers were excessively remunerated by some of the investors.,5.70249176,,TRUE,FALSE,FALSE,TRUE
+The brokers were excessively remunerated by some of the wealthy investors.,5.65702617,,TRUE,TRUE,FALSE,TRUE
+The brokers were excessively remunerated by some of the investors of the fund.,5.76257932,,TRUE,FALSE,TRUE,TRUE
+The brokers were excessively remunerated by some of the wealthy investors of the fund.,5.7264446,,TRUE,TRUE,TRUE,TRUE

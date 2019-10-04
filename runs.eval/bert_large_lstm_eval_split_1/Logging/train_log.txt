@@ -1,0 +1,263 @@
+Using configurations:
+{'BATCH_ITEM_NUM': 30,
+ 'BERT_LARGE': True,
+ 'BERT_LAYER': 18,
+ 'CONFIG_NAME': 'bert_large_lstm_eval_split_1',
+ 'CROSS_VALIDATION_FLAG': False,
+ 'CUDA': True,
+ 'ELMO_LAYER': 2,
+ 'ELMO_MODE': 'concat',
+ 'EXPERIMENT_NAME': 'bert_large_lstm_eval_split_1',
+ 'GLOVE_DIM': 100,
+ 'GPU_NUM': 1,
+ 'IS_BERT': True,
+ 'IS_ELMO': False,
+ 'IS_RANDOM': False,
+ 'KFOLDS': 5,
+ 'LSTM': {'ATTN': True,
+          'BIDIRECTION': True,
+          'DROP_PROB': 0.3,
+          'FLAG': True,
+          'HIDDEN_DIM': 800,
+          'LAYERS': 2,
+          'SEQ_LEN': 30},
+ 'MODE': 'train',
+ 'OUT_PATH': '/jagupard21/scr1/sebschu/eval/',
+ 'PREDICTION_TYPE': 'rating',
+ 'PREDON': 'train',
+ 'RESUME_DIR': '',
+ 'SAVE_PREDS': False,
+ 'SEED': 1,
+ 'SINGLE_SENTENCE': True,
+ 'SOME_DATABASE': './some_database.csv',
+ 'SPLIT_NAME': '1',
+ 'TRAIN': {'BATCH_SIZE': 32,
+           'COEFF': {'BETA_1': 0.9, 'BETA_2': 0.999, 'EPS': 1e-08},
+           'DROPOUT': {'FC_1': 0.75, 'FC_2': 0.75},
+           'FLAG': True,
+           'INTERVAL': 190,
+           'LR': 0.001,
+           'LR_DECAY_EPOCH': 100,
+           'LR_DECAY_RATE': 1.0,
+           'START_EPOCH': 0,
+           'TOTAL_EPOCH': 190}}
+Using random seed 1.
+Path to the current word embeddings: ./datasets/seed_1/1/bert_largelayer_18_lstm/embs_train_30.npy
+loading file https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-uncased-vocab.txt from cache at /sailhome/sebschu/.cache/torch/pytorch_transformers/9b3c03a36e83b13d5ba95ac965c9f9074a99e14340c523ab405703179e79fc46.542ce4285a40d23a559526243235df47c5f75c197f04f37d1a0c124c32c9a084
+loading configuration file https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-uncased-config.json from cache at /sailhome/sebschu/.cache/torch/pytorch_transformers/6dfaed860471b03ab5b9acb6153bea82b6632fb9bbe514d3fff050fe1319ee6d.4c88e2dec8f8b017f319f6db2b157fee632c0860d9422e4851bd0d6999f9ce38
+Model config {
+  "attention_probs_dropout_prob": 0.1,
+  "finetuning_task": null,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 1024,
+  "initializer_range": 0.02,
+  "intermediate_size": 4096,
+  "layer_norm_eps": 1e-12,
+  "max_position_embeddings": 512,
+  "num_attention_heads": 16,
+  "num_hidden_layers": 24,
+  "num_labels": 2,
+  "output_attentions": false,
+  "output_hidden_states": true,
+  "torchscript": false,
+  "type_vocab_size": 2,
+  "vocab_size": 30522
+}
+
+loading weights file https://s3.amazonaws.com/models.huggingface.co/bert/bert-large-uncased-pytorch_model.bin from cache at /sailhome/sebschu/.cache/torch/pytorch_transformers/54da47087cc86ce75324e4dc9bbb5f66c6e83a7c6bd23baea8b489acc8d09aa4.4d5343a4b979c4beeaadef17a0453d1bb183dd9b084f58b84c7cc781df343ae6
+Start training
+===============================
+initializing neural net
+[1/190][36/36] total train loss: 1.3907; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[2/190][36/36] total train loss: 0.7275; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[3/190][36/36] total train loss: 0.5254; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[4/190][36/36] total train loss: 0.3529; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[5/190][36/36] total train loss: 0.2339; total val loss: 0.0000 val r: 0.0000; time: 1.41sec
+[6/190][36/36] total train loss: 0.1838; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[7/190][36/36] total train loss: 0.1439; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[8/190][36/36] total train loss: 0.1134; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[9/190][36/36] total train loss: 0.0835; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[10/190][36/36] total train loss: 0.0694; total val loss: 0.0000 val r: 0.0000; time: 1.41sec
+[11/190][36/36] total train loss: 0.0576; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[12/190][36/36] total train loss: 0.0554; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[13/190][36/36] total train loss: 0.0522; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[14/190][36/36] total train loss: 0.0495; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[15/190][36/36] total train loss: 0.0552; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[16/190][36/36] total train loss: 0.0528; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[17/190][36/36] total train loss: 0.0484; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[18/190][36/36] total train loss: 0.0429; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[19/190][36/36] total train loss: 0.0385; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[20/190][36/36] total train loss: 0.0390; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[21/190][36/36] total train loss: 0.0426; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[22/190][36/36] total train loss: 0.0432; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[23/190][36/36] total train loss: 0.0392; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[24/190][36/36] total train loss: 0.0391; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[25/190][36/36] total train loss: 0.0433; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[26/190][36/36] total train loss: 0.0450; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[27/190][36/36] total train loss: 0.0418; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[28/190][36/36] total train loss: 0.0416; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[29/190][36/36] total train loss: 0.0416; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[30/190][36/36] total train loss: 0.0393; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[31/190][36/36] total train loss: 0.0399; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[32/190][36/36] total train loss: 0.0364; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[33/190][36/36] total train loss: 0.0350; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[34/190][36/36] total train loss: 0.0405; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[35/190][36/36] total train loss: 0.0362; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[36/190][36/36] total train loss: 0.0386; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[37/190][36/36] total train loss: 0.0382; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[38/190][36/36] total train loss: 0.0396; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[39/190][36/36] total train loss: 0.0380; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[40/190][36/36] total train loss: 0.0369; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[41/190][36/36] total train loss: 0.0388; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[42/190][36/36] total train loss: 0.0361; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[43/190][36/36] total train loss: 0.0344; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[44/190][36/36] total train loss: 0.0330; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[45/190][36/36] total train loss: 0.0337; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[46/190][36/36] total train loss: 0.0336; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[47/190][36/36] total train loss: 0.0351; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[48/190][36/36] total train loss: 0.0360; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[49/190][36/36] total train loss: 0.0335; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[50/190][36/36] total train loss: 0.0332; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[51/190][36/36] total train loss: 0.0334; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[52/190][36/36] total train loss: 0.0320; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[53/190][36/36] total train loss: 0.0305; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[54/190][36/36] total train loss: 0.0319; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[55/190][36/36] total train loss: 0.0319; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[56/190][36/36] total train loss: 0.0344; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[57/190][36/36] total train loss: 0.0340; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[58/190][36/36] total train loss: 0.0332; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[59/190][36/36] total train loss: 0.0346; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[60/190][36/36] total train loss: 0.0353; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[61/190][36/36] total train loss: 0.0326; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[62/190][36/36] total train loss: 0.0332; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[63/190][36/36] total train loss: 0.0323; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[64/190][36/36] total train loss: 0.0334; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[65/190][36/36] total train loss: 0.0339; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[66/190][36/36] total train loss: 0.0350; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[67/190][36/36] total train loss: 0.0324; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[68/190][36/36] total train loss: 0.0327; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[69/190][36/36] total train loss: 0.0331; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[70/190][36/36] total train loss: 0.0327; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[71/190][36/36] total train loss: 0.0297; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[72/190][36/36] total train loss: 0.0322; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[73/190][36/36] total train loss: 0.0304; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[74/190][36/36] total train loss: 0.0328; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[75/190][36/36] total train loss: 0.0321; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[76/190][36/36] total train loss: 0.0317; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[77/190][36/36] total train loss: 0.0343; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[78/190][36/36] total train loss: 0.0309; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[79/190][36/36] total train loss: 0.0329; total val loss: 0.0000 val r: 0.0000; time: 1.46sec
+[80/190][36/36] total train loss: 0.0326; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[81/190][36/36] total train loss: 0.0321; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[82/190][36/36] total train loss: 0.0314; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[83/190][36/36] total train loss: 0.0320; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[84/190][36/36] total train loss: 0.0336; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[85/190][36/36] total train loss: 0.0331; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[86/190][36/36] total train loss: 0.0297; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[87/190][36/36] total train loss: 0.0285; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[88/190][36/36] total train loss: 0.0283; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[89/190][36/36] total train loss: 0.0294; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[90/190][36/36] total train loss: 0.0283; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[91/190][36/36] total train loss: 0.0294; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[92/190][36/36] total train loss: 0.0296; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[93/190][36/36] total train loss: 0.0296; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[94/190][36/36] total train loss: 0.0291; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[95/190][36/36] total train loss: 0.0295; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[96/190][36/36] total train loss: 0.0329; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[97/190][36/36] total train loss: 0.0303; total val loss: 0.0000 val r: 0.0000; time: 1.46sec
+[98/190][36/36] total train loss: 0.0307; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[99/190][36/36] total train loss: 0.0297; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+learning rate updated: 0.001
+[100/190][36/36] total train loss: 0.0293; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[101/190][36/36] total train loss: 0.0298; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[102/190][36/36] total train loss: 0.0298; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[103/190][36/36] total train loss: 0.0303; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[104/190][36/36] total train loss: 0.0293; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[105/190][36/36] total train loss: 0.0279; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[106/190][36/36] total train loss: 0.0303; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[107/190][36/36] total train loss: 0.0285; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[108/190][36/36] total train loss: 0.0285; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[109/190][36/36] total train loss: 0.0298; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[110/190][36/36] total train loss: 0.0302; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[111/190][36/36] total train loss: 0.0307; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[112/190][36/36] total train loss: 0.0311; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[113/190][36/36] total train loss: 0.0300; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[114/190][36/36] total train loss: 0.0301; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[115/190][36/36] total train loss: 0.0297; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[116/190][36/36] total train loss: 0.0288; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[117/190][36/36] total train loss: 0.0292; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[118/190][36/36] total train loss: 0.0287; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[119/190][36/36] total train loss: 0.0277; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[120/190][36/36] total train loss: 0.0273; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[121/190][36/36] total train loss: 0.0280; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[122/190][36/36] total train loss: 0.0277; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[123/190][36/36] total train loss: 0.0284; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[124/190][36/36] total train loss: 0.0291; total val loss: 0.0000 val r: 0.0000; time: 1.47sec
+[125/190][36/36] total train loss: 0.0288; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[126/190][36/36] total train loss: 0.0298; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[127/190][36/36] total train loss: 0.0288; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[128/190][36/36] total train loss: 0.0274; total val loss: 0.0000 val r: 0.0000; time: 1.46sec
+[129/190][36/36] total train loss: 0.0274; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[130/190][36/36] total train loss: 0.0283; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[131/190][36/36] total train loss: 0.0297; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[132/190][36/36] total train loss: 0.0280; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[133/190][36/36] total train loss: 0.0280; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[134/190][36/36] total train loss: 0.0289; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[135/190][36/36] total train loss: 0.0289; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[136/190][36/36] total train loss: 0.0288; total val loss: 0.0000 val r: 0.0000; time: 1.46sec
+[137/190][36/36] total train loss: 0.0285; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[138/190][36/36] total train loss: 0.0278; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[139/190][36/36] total train loss: 0.0283; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[140/190][36/36] total train loss: 0.0286; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[141/190][36/36] total train loss: 0.0283; total val loss: 0.0000 val r: 0.0000; time: 1.46sec
+[142/190][36/36] total train loss: 0.0279; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[143/190][36/36] total train loss: 0.0272; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[144/190][36/36] total train loss: 0.0267; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[145/190][36/36] total train loss: 0.0270; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[146/190][36/36] total train loss: 0.0264; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[147/190][36/36] total train loss: 0.0268; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[148/190][36/36] total train loss: 0.0272; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[149/190][36/36] total train loss: 0.0268; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[150/190][36/36] total train loss: 0.0270; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[151/190][36/36] total train loss: 0.0267; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[152/190][36/36] total train loss: 0.0282; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[153/190][36/36] total train loss: 0.0277; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[154/190][36/36] total train loss: 0.0263; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[155/190][36/36] total train loss: 0.0279; total val loss: 0.0000 val r: 0.0000; time: 1.42sec
+[156/190][36/36] total train loss: 0.0294; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[157/190][36/36] total train loss: 0.0282; total val loss: 0.0000 val r: 0.0000; time: 1.46sec
+[158/190][36/36] total train loss: 0.0277; total val loss: 0.0000 val r: 0.0000; time: 1.48sec
+[159/190][36/36] total train loss: 0.0284; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[160/190][36/36] total train loss: 0.0266; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[161/190][36/36] total train loss: 0.0269; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[162/190][36/36] total train loss: 0.0275; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[163/190][36/36] total train loss: 0.0277; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[164/190][36/36] total train loss: 0.0266; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[165/190][36/36] total train loss: 0.0270; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[166/190][36/36] total train loss: 0.0299; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[167/190][36/36] total train loss: 0.0281; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[168/190][36/36] total train loss: 0.0275; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[169/190][36/36] total train loss: 0.0278; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[170/190][36/36] total train loss: 0.0267; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[171/190][36/36] total train loss: 0.0270; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[172/190][36/36] total train loss: 0.0260; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[173/190][36/36] total train loss: 0.0266; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[174/190][36/36] total train loss: 0.0267; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[175/190][36/36] total train loss: 0.0272; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[176/190][36/36] total train loss: 0.0261; total val loss: 0.0000 val r: 0.0000; time: 1.46sec
+[177/190][36/36] total train loss: 0.0264; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[178/190][36/36] total train loss: 0.0259; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[179/190][36/36] total train loss: 0.0263; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[180/190][36/36] total train loss: 0.0256; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[181/190][36/36] total train loss: 0.0308; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[182/190][36/36] total train loss: 0.0349; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[183/190][36/36] total train loss: 0.0388; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[184/190][36/36] total train loss: 0.0409; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[185/190][36/36] total train loss: 0.0612; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[186/190][36/36] total train loss: 0.0582; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+[187/190][36/36] total train loss: 0.0464; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[188/190][36/36] total train loss: 0.0357; total val loss: 0.0000 val r: 0.0000; time: 1.45sec
+[189/190][36/36] total train loss: 0.0295; total val loss: 0.0000 val r: 0.0000; time: 1.43sec
+[190/190][36/36] total train loss: 0.0272; total val loss: 0.0000 val r: 0.0000; time: 1.44sec
+Best epoch 0 with val_r = 0.0000.
