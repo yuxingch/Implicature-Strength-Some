@@ -1,0 +1,57 @@
+Using configurations:
+{'BATCH_ITEM_NUM': 30,
+ 'BERT_LARGE': True,
+ 'BERT_LAYER': 18,
+ 'CONFIG_NAME': 'bert_large_lstm_eval_split_0',
+ 'CROSS_VALIDATION_FLAG': False,
+ 'CUDA': True,
+ 'ELMO_LAYER': 2,
+ 'ELMO_MODE': 'concat',
+ 'EXPERIMENT_NAME': 'bert_large_lstm_eval_split_0',
+ 'GLOVE_DIM': 100,
+ 'GPU_NUM': 1,
+ 'IS_BERT': True,
+ 'IS_ELMO': False,
+ 'IS_RANDOM': False,
+ 'KFOLDS': 5,
+ 'LSTM': {'ATTN': True,
+          'BIDIRECTION': True,
+          'DROP_PROB': 0.3,
+          'FLAG': True,
+          'HIDDEN_DIM': 800,
+          'LAYERS': 2,
+          'SEQ_LEN': 30},
+ 'MODE': 'test',
+ 'OUT_PATH': '/jagupard21/scr1/sebschu/eval/',
+ 'PREDICTION_TYPE': 'rating',
+ 'PREDON': 'test',
+ 'RESUME_DIR': '',
+ 'SAVE_PREDS': True,
+ 'SEED': 1,
+ 'SINGLE_SENTENCE': True,
+ 'SOME_DATABASE': './some_database.csv',
+ 'SPLIT_NAME': '0',
+ 'TRAIN': {'BATCH_SIZE': 32,
+           'COEFF': {'BETA_1': 0.9, 'BETA_2': 0.999, 'EPS': 1e-08},
+           'DROPOUT': {'FC_1': 0.75, 'FC_2': 0.75},
+           'FLAG': False,
+           'INTERVAL': 190,
+           'LR': 0.001,
+           'LR_DECAY_EPOCH': 100,
+           'LR_DECAY_RATE': 1.0,
+           'START_EPOCH': 0,
+           'TOTAL_EPOCH': 190}}
+Using random seed 1.
+Path to the current word embeddings: ./datasets/seed_1/0/bert_largelayer_18_lstm/embs_test_30.npy
+epochs to test: [0, 1, 190]
+initializing neural net
+Load from: /jagupard21/scr1/sebschu/eval/bert_large_lstm_eval_split_0/Model/RNet_epoch_0.pth
+Write attention weights to /jagupard21/scr1/sebschu/eval/bert_large_lstm_eval_split_0/Attention/test_attn_epoch0.npy.
+initializing neural net
+Load from: /jagupard21/scr1/sebschu/eval/bert_large_lstm_eval_split_0/Model/RNet_epoch_1.pth
+Write attention weights to /jagupard21/scr1/sebschu/eval/bert_large_lstm_eval_split_0/Attention/test_attn_epoch1.npy.
+initializing neural net
+Load from: /jagupard21/scr1/sebschu/eval/bert_large_lstm_eval_split_0/Model/RNet_epoch_190.pth
+Write attention weights to /jagupard21/scr1/sebschu/eval/bert_large_lstm_eval_split_0/Attention/test_attn_epoch190.npy.
+Max r = 0.7784518822620834 achieved at epoch 190
+r by epoch: [0.08683775276548564, 0.6818250069101551, 0.7784518822620834]
