@@ -85,6 +85,7 @@ ggsave("../graphs/modification.png",width=6,height=4)
 
 # attention weight analysis (by position)
 dattn = read_csv("../data/attn_by_pos_subj_30.csv")
+dattn = read_csv("../data/attn_by_pos_subj_30_withSome.csv")
 colnames(dattn) = c("Subjecthood","Position","Weight")
 dattn %<>% 
   mutate(Subjecthood = fct_recode(Subjecthood,subject="yes",other="no"))
@@ -105,6 +106,7 @@ ggplot(means, aes(x=Position,y=Mean,fill=Subjecthood)) +
   ylab("Mean Attention Weight") +
   theme_bw()
 ggsave("../graphs/avgAttnNaturalSubj30.png",width=6,height=4)
+ggsave("../graphs/avgAttnNaturalSubj30_withSome.png",width=6,height=4)
 
 # all learning curves
 dmod = read_csv("../data/all_learning_curves.csv")
