@@ -108,6 +108,29 @@ ggplot(means, aes(x=Position,y=Mean,fill=Subjecthood)) +
 ggsave("../graphs/avgAttnNaturalSubj30.png",width=6,height=4)
 ggsave("../graphs/avgAttnNaturalSubj30_withSome.png",width=6,height=4)
 
+# some vs other
+dattn = read_csv("../data/attn_by_pos_some_other.csv")
+colnames(dattn) = c("Token","Position","Weight")
+dattn %<>% 
+  mutate(Token = fct_recode(Token,some="yes",other="no"))
+
+means = dattn %>%
+  group_by(Position, Token) %>%
+  summarise(Mean = mean(Weight), CILow=ci.low(Weight),CIHigh=ci.high(Weight)) %>% 
+  ungroup() %>%
+  mutate(YMin=Mean-CILow,YMax=Mean+CIHigh)
+dodge = position_dodge(.9)
+
+ggplot(means, aes(x=Position,y=Mean,fill=Token)) + 
+  geom_errorbar(aes(ymin=YMin,ymax=YMax),position=dodge,width=0) +
+  geom_point(position=dodge,color="black",pch=21,size=2) +
+  scale_fill_manual(values=cbPalette[c(1,2)]) + 
+  scale_color_manual(values=cbPalette[c(1,2)]) +
+  xlab("Position in Utterance") +
+  ylab("Mean Attention Weight") +
+  theme_bw()
+ggsave("../graphs/avgAttnNaturalSomeOther.png",width=6,height=4)
+
 # all learning curves
 dmod = read_csv("../data/all_learning_curves.csv")
 dmod %<>% mutate_if(is.character,funs(factor(.))) %>%
