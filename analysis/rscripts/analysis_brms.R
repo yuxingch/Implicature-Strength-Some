@@ -26,7 +26,13 @@ m.fixed = lmer(Rating ~ cPartitive*cStrengthSome+credInfoStatus*cBinaryGF*cModif
 summary(m.fixed)
 
 # BRMS model
-bm.fixed = brm(Rating ~ cPartitive*cStrengthSome+credInfoStatus*cBinaryGF*cModification + clogSentenceLength + (1|workerid), data=centered, control = list(max_treedepth = 12))
+f = "../models/model_bm_fixed.RData"
+if (file.exists(f)) {
+  bm.fixed= readRDS(f)
+} else {
+  bm.fixed = brm(Rating ~ cPartitive*cStrengthSome+credInfoStatus*cBinaryGF*cModification + clogSentenceLength + (1|workerid), data=centered, control = list(max_treedepth = 12))
+  saveRDS(bm.fixed, f)
+}
 summary(bm.fixed)
 
 
@@ -48,7 +54,13 @@ m.evalvectorpred = lmer(Rating ~ predicted + (1|workerid), data=d)
 summary(m.evalvectorpred) 
 
 # BRMS model with random by-subject intercepts and model predictions 
-bm.evalvectorpred = brm(Rating ~ predicted + (1|workerid), data=d)
+f = "../models/model_bm_evalvectorpred.RData"
+if (file.exists(f)) {
+  bm.evalvectorpred= readRDS(f)
+} else {
+  bm.evalvectorpred = brm(Rating ~ predicted + (1|workerid), data=d)
+  saveRDS(bm.evalvectorpred, f)
+}
 summary(bm.evalvectorpred) 
 
 # LMER model with random by-subject intercepts, fixed effects, and model predictions 
@@ -56,18 +68,28 @@ m.evalfixedandvectorpred = lmer(Rating ~ predicted + cPartitive*cStrengthSome+cr
 summary(m.evalfixedandvectorpred)
 
 # BRMS model with random by-subject intercepts, fixed effects, and model predictions 
-bm.evalfixedandvectorpred = brm(Rating ~ predicted + cPartitive*cStrengthSome+credInfoStatus*cBinaryGF*cModification + clogSentenceLength + (1|workerid) + (1|Item), data=d, control = list(max_treedepth = 12))
+f = "../models/model_bm_evalfixedandvectorpred.RData"
+if (file.exists(f)) {
+  bm.evalfixedandvectorpred= readRDS(f)
+} else {
+  bm.evalfixedandvectorpred = brm(Rating ~ predicted + cPartitive*cStrengthSome+credInfoStatus*cBinaryGF*cModification + clogSentenceLength + (1|workerid) + (1|Item), data=d, control = list(max_treedepth = 12))
+  saveRDS(bm.evalfixedandvectorpred, f)
+}
 summary(bm.evalfixedandvectorpred)
-stanplot(bm.evalfixedandvectorpred)
 
 # LMER model with random by-subject intercepts, and fixed effects
 m.evalfixed = lmer(Rating ~ cPartitive*cStrengthSome+credInfoStatus*cBinaryGF*cModification + clogSentenceLength + (1|workerid), data=d)
 summary(m.evalfixed)
 
 # BRMS model with random by-subject intercepts,and fixed effects
-bm.evalfixed = brm(Rating ~ cPartitive*cStrengthSome+credInfoStatus*cBinaryGF*cModification + clogSentenceLength + (1|workerid), data=d, control = list(max_treedepth = 12))
+f = "../models/model_bm_evalfixed.RData"
+if (file.exists(f)) {
+  bm.evalfixed= readRDS(f)
+} else {
+  bm.evalfixed = brm(Rating ~ cPartitive*cStrengthSome+credInfoStatus*cBinaryGF*cModification + clogSentenceLength + (1|workerid), data=d, control = list(max_treedepth = 12))
+  saveRDS(bm.evalfixed, f)
+}
 summary(bm.evalfixed)
-stanplot(bm.evalfixed)
 
 # compare coefficients of models with and without NN model predictions
 
@@ -110,13 +132,6 @@ estimates$Parameter = str_replace(estimates$Parameter, "b_", "")
 estimates = estimates %>% filter(Parameter != "Intercept")
 estimates$Parameter = factor(estimates$Parameter, levels = factor_levels, labels=factor_labels, ordered = TRUE)
 estimates$model = factor(estimates$model, levels = c("original model", "extended model"), ordered = TRUE)
-estimates %>% ggplot(aes(y=str_replace(Parameter, "b_", ""), x=mu, col=model)) + 
-  geom_point(size=3) + geom_point(size=2.0, col="white", alpha=0.6) +
-  geom_errorbarh(aes(xmin=cilow, xmax=cihigh), height=.1) +
-  xlab("coefficient estimate") +
-  ylab("Parameter") +
-  theme(legend.position = "bottom") +
-  scale_color_manual(values=cbPalette)
 
 max_values = estimates %>% group_by(Parameter) %>% summarise(mean_estimate = max(cihigh))
 
@@ -163,14 +178,15 @@ estimates_plot = estimates %>% ggplot(aes(y=Parameter, x=mu, col=model)) +
   ylab("Parameter") +
   geom_text(aes(x=mean_estimate, label=label),col="black", size=5, data=signif_values, nudge_x=.1, nudge_y=-.1) + 
   theme(legend.position = "bottom")  +
-  guides(color=guide_legend(title="Regression model"))
+  guides(color=guide_legend(title="Regression model")) +
+  scale_color_manual(values=cbPalette)
 
-ggsave(estimates_plot, filename = "../graphs/eval_coefficient_estimates.pdf", width=24, height=12, units = "cm")
+ggsave(estimates_plot, filename = "../graphs/eval_coefficient_estimates.pdf", width=24, height=9, units = "cm")
 
 
 #visualization of correlation
 
-r2e = geom_text(x=1, y=6.5, hjust=0, label=as.character(as.expression(" "~R^2~"= 0.776")), color="black", parse=TRUE, size=5)
+r2e = geom_text(x=1, y=6.5, hjust=0, label=as.character(as.expression(" "~r~"= 0.78")), color="black", parse=TRUE, size=5)
 
 
 eval_correlation_plot = d %>%
@@ -217,16 +233,23 @@ d_no_context = read_csv("../data/some_without_context_means.csv")   %>%
 
 d = centered %>%
   right_join(preds) %>%
-  right_join(d_no_context)
+  left_join(d_no_context)
 
 
 
 # LMER model with random by-subject intercepts and model predictions 
+
 m.cvvectorpred = lmer(Rating ~ predicted + (1|workerid), data=d)
 summary(m.cvvectorpred) 
 
 # BRMS model with random by-subject intercepts and model predictions 
-bm.cvvectorpred = brm(Rating ~ predicted + (1|workerid), data=d)
+f = "../models/model_bm_cvvectorpred.RData"
+if (file.exists(f)) {
+  bm.cvvectorpred= readRDS(f)
+} else {
+  bm.cvvectorpred = brm(Rating ~ predicted + (1|workerid), data=d)
+  saveRDS(bm.cvvectorpred,f)
+}
 summary(bm.cvvectorpred) 
 
 # LMER model with random by-subject intercepts, fixed effects, and model predictions 
@@ -234,18 +257,28 @@ m.cvfixedandvectorpred = lmer(Rating ~ predicted + cPartitive*cStrengthSome+cred
 summary(m.cvfixedandvectorpred)
 
 # BRMS model with random by-subject intercepts, fixed effects, and model predictions 
-bm.cvfixedandvectorpred = brm(Rating ~ predicted + cPartitive*cStrengthSome+credInfoStatus*cBinaryGF*cModification + clogSentenceLength + (1|workerid), data=d, control = list(max_treedepth = 12))
+f = "../models/model_bm_cvfixedandvectorpred.RData"
+if (file.exists(f)) {
+  bm.cvfixedandvectorpred= readRDS(f)
+} else {  
+  bm.cvfixedandvectorpred = brm(Rating ~ predicted + cPartitive*cStrengthSome+credInfoStatus*cBinaryGF*cModification + clogSentenceLength + (1|workerid), data=d, control = list(max_treedepth = 12))
+  saveRDS(bm.cvfixedandvectorpred,f)
+}
 summary(bm.cvfixedandvectorpred)
-stanplot(bm.cvfixedandvectorpred)
 
 # LMER model with random by-subject intercepts, and fixed effects
 m.cvfixed = lmer(Rating ~ cPartitive*cStrengthSome+credInfoStatus*cBinaryGF*cModification + clogSentenceLength + (1|workerid), data=d)
 summary(m.cvfixed)
 
 # BRMS model with random by-subject intercepts, and fixed effects
-bm.cvfixed = brm(Rating ~ cPartitive*cStrengthSome+credInfoStatus*cBinaryGF*cModification + clogSentenceLength + (1|workerid), data=d, control = list(max_treedepth = 12))
+f = "../models/model_bm_cvfixed.RData"
+if (file.exists(f)) {
+  bm.cvfixed= readRDS(f)
+} else {  
+  bm.cvfixed = brm(Rating ~ cPartitive*cStrengthSome+credInfoStatus*cBinaryGF*cModification + clogSentenceLength + (1|workerid), data=d, control = list(max_treedepth = 12))
+  saveRDS(bm.cvfixed,f)
+}
 summary(bm.cvfixed)
-stanplot(bm.cvfixed)
 
 # compare coefficients of models with and without NN model predictions
 
@@ -319,54 +352,55 @@ estimates_plot = estimates %>% ggplot(aes(y=Parameter, x=mu, col=model)) +
   ylab("Parameter") +
   geom_text(aes(x=mean_estimate, label=label),col="black", size=5, data=signif_values, nudge_x=.1, nudge_y=-.1) + 
   theme(legend.position = "bottom")  +
-  guides(color=guide_legend(title="Regression model"))
+  guides(color=guide_legend(title="Regression model")) +
+  scale_color_manual(values = cbPalette)
 
-ggsave(estimates_plot, filename = "../graphs/cv_coefficient_estimates.pdf", width=24, height=12, units = "cm")
+ggsave(estimates_plot, filename = "../graphs/cv_coefficient_estimates.pdf", width=24, height=9, units = "cm")
 
 ######################################
 # analysis of no-context data
 ######################################
 
 
-#item_means = d %>%
-#  arrange(original_mean) %>%
-#  mutate(pos=seq(1,nrow(d))) %>%
-#  gather(key="source", value="rat", original_mean, original_mean_nocontext, predicted) %>% 
-#  group_by(Item, source) %>% 
-#  summarise(rat=mean(rat), pos = mean(pos)) %>%
-#  arrange(pos)
-#
-#item_means$sorted_idx = seq.int(nrow(item_means))
-#item_means$g = round(item_means$sorted_idx / (nrow(item_means) / 6))
-#item_means$Item = factor(item_means$Item, levels=unique(item_means$Item))
-#item_means %>%  ggplot(aes(x=Item, y=rat, col=source)) + geom_point() + facet_wrap(~g, scales = "free_x", nrow = 7) 
-#
-#
-#d %>%
-#  group_by(Item) %>%
-#  summarise(predicted = mean(predicted), original_mean = mean(original_mean), original_mean_nocontext = mean(original_mean_nocontext)) %>%
-#  ggplot(aes(x=original_mean, y=predicted)) + geom_point() + geom_smooth(method="lm")
-#
-#d %>%
-#  group_by(Item) %>%
-#  summarise(predicted = mean(predicted), original_mean = mean(original_mean), original_mean_nocontext = mean(original_mean_nocontext)) %>%
-#  ggplot(aes(x=original_mean_nocontext, y=predicted)) + geom_point() + geom_smooth(method="lm")
-#
-#d %>%
-#  group_by(Item) %>%
-#  summarise(predicted = mean(predicted), original_mean = mean(original_mean), original_mean_nocontext = mean(original_mean_nocontext)) %>%
-#  mutate(diff_predicted_context = abs(predicted-original_mean)) %>%
-#  mutate(diff_predicted_nocontext = abs(predicted-original_mean_nocontext)) %>%
-#  mutate(diff_context_nocontext = abs(original_mean-original_mean_nocontext)) %>%
-#  arrange(desc(diff_predicted_context))
-#  
-#  
-#
-#cor(d$predicted, d$original_mean)
-#
-#cor(d$predicted, d$original_mean_nocontext)
-#
-#cor(d$original_mean, d$original_mean_nocontext)
-#
-#
-#
+item_means = d %>%
+  arrange(original_mean) %>%
+  mutate(pos=seq(1,nrow(d))) %>%
+  gather(key="source", value="rat", original_mean, original_mean_nocontext, predicted) %>% 
+  group_by(Item, source) %>% 
+  summarise(rat=mean(rat), pos = mean(pos)) %>%
+  arrange(pos)
+
+item_means$sorted_idx = seq.int(nrow(item_means))
+item_means$g = round(item_means$sorted_idx / (nrow(item_means) / 6))
+item_means$Item = factor(item_means$Item, levels=unique(item_means$Item))
+item_means %>%  ggplot(aes(x=Item, y=rat, col=source)) + geom_point() + facet_wrap(~g, scales = "free_x", nrow = 7) 
+
+
+d %>%
+  group_by(Item) %>%
+  summarise(predicted = mean(predicted), original_mean = mean(original_mean), original_mean_nocontext = mean(original_mean_nocontext)) %>%
+  ggplot(aes(x=original_mean, y=predicted)) + geom_point() + geom_smooth(method="lm")
+
+d %>%
+  group_by(Item) %>%
+  summarise(predicted = mean(predicted), original_mean = mean(original_mean), original_mean_nocontext = mean(original_mean_nocontext)) %>%
+  ggplot(aes(x=original_mean_nocontext, y=predicted)) + geom_point() + geom_smooth(method="lm")
+
+d %>%
+  group_by(Item, Sentence) %>%
+  summarise(predicted = mean(predicted), original_mean = mean(original_mean), original_mean_nocontext = mean(original_mean_nocontext)) %>%
+  mutate(diff_predicted_context = abs(predicted-original_mean)) %>%
+  mutate(diff_predicted_nocontext = abs(predicted-original_mean_nocontext)) %>%
+  mutate(diff_context_nocontext = abs(original_mean-original_mean_nocontext)) %>%
+  mutate(diff_predictions = abs(diff_predicted_context-diff_predicted_nocontext)) %>%
+  arrange(desc(diff_predictions)) %>% View()
+  
+  
+
+cor(d$predicted, d$original_mean)
+
+cor(d$predicted, d$original_mean_nocontext)
+
+cor(d$original_mean, d$original_mean_nocontext)
+
+
