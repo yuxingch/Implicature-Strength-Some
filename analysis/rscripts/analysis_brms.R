@@ -344,16 +344,16 @@ signif_values = sim_results %>%
   mutate(Parameter = factor(str_replace(str_replace_all(Parameter, "\\.", ":"), "b_", ""), levels = factor_levels, labels=factor_labels)) %>%
   merge(max_values)
 
-estimates_plot = estimates %>% ggplot(aes(y=Parameter, x=mu, col=model)) + 
+estimates_plot = estimates %>% ggplot(aes(y=Parameter, x=mu)) + 
   geom_vline(xintercept=0) +
   geom_errorbarh(aes(xmin=cilow, xmax=cihigh), size=1, height=.4) +
-  geom_point(size=5) + geom_point(size=3.0, col="white", alpha=0.6) +
+  geom_point(aes(fill=model, pch=model), size=5, col="black") +
   xlab("Coefficient estimate") +
   ylab("Parameter") +
-  geom_text(aes(x=mean_estimate, label=label),col="black", size=5, data=signif_values, nudge_x=.1, nudge_y=-.1) + 
+  scale_shape_manual(name="Regression model", values=c(23,24)) +
+  geom_text(aes(x=mean_estimate, label=label),col="black", fill="black", pch="black", size=5, data=signif_values, nudge_x=.1, nudge_y=-.1) + 
   theme(legend.position = "bottom")  +
-  guides(color=guide_legend(title="Regression model")) +
-  scale_color_manual(values = cbPalette)
+  scale_color_manual(name="Regression model", values = cbPalette[c(1,2)])
 
 ggsave(estimates_plot, filename = "../graphs/cv_coefficient_estimates.pdf", width=24, height=9, units = "cm")
 

@@ -29,11 +29,12 @@ means = dof %>%
 dodge = position_dodge(.9)
 
 of_plot = ggplot(means, aes(x=Normalized,y=Mean,fill=Of)) +
-  geom_errorbar(aes(ymin=YMin,ymax=YMax),width=0.2) +
-  geom_point(color="black",pch=21,size=3) +
+  geom_errorbar(aes(ymin=YMin,ymax=YMax),width=0) +
+  geom_point(color="black",pch=21,size=4) +
   scale_fill_manual(name="",values=cbPalette[c(5,7)]) + 
-  ylab("Mean Attention Weight")  + theme_bw() + theme(legend.position = "bottom") + xlab("")
-ggsave("../graphs/of_analysis.pdf",plot=of_plot, width=3,height=3)
+  ylab("Mean Attention Weight")  + theme_bw() + theme(legend.position = "bottom", axis.title.y=element_blank(),legend.text=element_text(size=12), 
+                                                      legend.title=element_text(size=13)) + xlab("")
+ggsave("../graphs/of_analysis.pdf",plot=of_plot, width=2.5,height=3.5)
 
 # qualitative analysis (subjecthood, partitive, modification)
 dqual = read_csv("../data/800_artificial.csv")
@@ -124,6 +125,8 @@ dattn %<>%
 dattn$Subjecthood = factor(dattn$Subjecthood, levels=c("subject", "other"), ordered = T)
 
 means = dattn %>%
+  filter(Position > 1) %>%
+  mutate(Position = Position -1) %>%
   group_by(Position, Subjecthood) %>%
   summarise(Mean = mean(Weight), CILow=ci.low(Weight),CIHigh=ci.high(Weight)) %>% 
   ungroup() %>%
@@ -131,13 +134,15 @@ means = dattn %>%
 dodge = position_dodge(.9)
 
 attn_plot = ggplot(means, aes(x=Position,y=Mean,fill=Subjecthood)) + 
-  geom_errorbar(aes(ymin=YMin,ymax=YMax),position=dodge,width=0) +
-  geom_point(position=dodge,color="black",pch=21,size=2) +
+  geom_errorbar(aes(ymin=YMin,ymax=YMax),width=0) +
+  geom_point(color="black",pch=21,size=4) +
   scale_fill_manual(values=cbPalette[c(1,2)]) + 
   scale_color_manual(values=cbPalette[c(1,2)]) +
+  scale_x_continuous(breaks=c(1,5,10,15,20,25)) +
   xlab("Position in Utterance") +
   ylab("Mean Attention Weight") +
-  theme_bw() + theme(legend.position = "bottom")
+  theme_bw() + theme(legend.position = "bottom", legend.text=element_text(size=12), 
+                     legend.title=element_text(size=13))
 ggsave("../graphs/avgAttnNaturalSubj30.pdf", plot=attn_plot, width=3,height=3)
 #ggsave("../graphs/avgAttnNaturalSubj30_withSome.png",width=6,height=4)
 
@@ -147,22 +152,33 @@ colnames(dattn) = c("Token","Position","Weight")
 dattn %<>% 
   mutate(Token = fct_recode(Token,some="yes",other="no"))
 
+dattn$Token = factor(dattn$Token, levels=c("some", "other"), ordered=T)
+
 means = dattn %>%
+  filter(Position > 1) %>%
+  mutate(Position = Position -1) %>%
   group_by(Position, Token) %>%
   summarise(Mean = mean(Weight), CILow=ci.low(Weight),CIHigh=ci.high(Weight)) %>% 
   ungroup() %>%
   mutate(YMin=Mean-CILow,YMax=Mean+CIHigh)
 dodge = position_dodge(.9)
 
-ggplot(means, aes(x=Position,y=Mean,fill=Token)) + 
-  geom_errorbar(aes(ymin=YMin,ymax=YMax),position=dodge,width=0) +
-  geom_point(position=dodge,color="black",pch=21,size=2) +
-  scale_fill_manual(values=cbPalette[c(1,2)]) + 
-  scale_color_manual(values=cbPalette[c(1,2)]) +
+someattn_plot = ggplot(means, aes(x=Position,y=Mean,fill=Token)) + 
+  geom_errorbar(aes(ymin=YMin,ymax=YMax),width=0) +
+  geom_point(color="black",pch=21,size=4) +
+  scale_fill_manual(values=cbPalette[c(5,7)]) + 
+  scale_color_manual(values=cbPalette[c(5,7)]) +
   xlab("Position in Utterance") +
   ylab("Mean Attention Weight") +
-  theme_bw()
-ggsave("../graphs/avgAttnNaturalSomeOther.png",width=6,height=4)
+  scale_x_continuous(breaks=c(1,5,10,15,20,25)) +
+  theme_bw() +
+  theme(legend.position = "bottom", 
+        axis.title.y = element_blank(), 
+        legend.text=element_text(size=12), 
+        legend.title=element_text(size=13))
+
+attn_plots = grid.arrange(attn_plot, someattn_plot, of_plot, ncol=3, widths=c(5.5,4.5, 2.5))
+ggsave("../graphs/attn_analysis.pdf", plot=attn_plots, width=12.5,height=3.5)
 
 # all learning curves
 dmod = read_csv("../data/all_learning_curves.csv")
@@ -183,4 +199,4 @@ ggplot(subset(dmod, dmod$epoch <= 200), aes(x=epoch,y=avg_val_corr,color=embeddi
   facet_wrap(~embedding,drop=F,nrow=1) +
   guides(color = guide_legend(order=1),
          linetype = guide_legend(order=2)) + theme_bw() + theme(legend.position="bottom")
-ggsave("../graphs/val_corr.png",width=7,height=3)
+ggsave("../graphs/val_corr.pdf",width=10,height=3)
