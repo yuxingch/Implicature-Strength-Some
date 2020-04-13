@@ -392,31 +392,7 @@ def split_by_whitespace(sentence):
 
 
 def get_sentence_glove(s, LSTM=False, not_contextual=True, seq_len=30):
-    s = s.replace('\'ve', ' \'ve')
-    s = s.replace('\'re', ' \'re')
-    s = s.replace('\'ll', ' \'ll')
-    s = s.replace('n\'t', ' n\'t')
-    s = s.replace('\'d', ' \'d')
-    s = s.replace('-', ' ')
-    s = s.replace('\'s', ' \'s')
-    modified_s = re.sub('#', '.', s).strip('.').split('.')
-    modified_s = list(filter(None, modified_s))
-    raw_tokens = []
-    for s in modified_s:
-        s = re.sub('speaker[0-9a-z\-\*]*[0-9]', '', s)
-        s = re.sub('[^a-zA-Z0-9- \n\.]', '', s)
-        s = re.sub('n[0-9][0-9a-z]{4,5}', '', s)
-        s = re.sub('[0-9]t[0-9]+', '', s)
-        s = s.replace(' oclock ', ' o\'clock ')
-        s = s.replace(' ve ', ' \'ve ')
-        s = s.replace(' re ', ' \'re ')
-        s = s.replace(' ll ', ' \'ll ')
-        s = s.replace(' nt ', ' n\'t ')
-        s = s.replace(' d ', ' \'d ')
-        s = s.replace(' s ', ' \'s ')
-        s = s.replace('doeuvres', 'd\'oeuvres')
-        s = s.replace('mumblex', 'mumble')
-        raw_tokens += split_by_whitespace(s)
+    raw_tokens = preprocess_utterance(s)
     lst = []
     if LSTM:
         lst = [_BOS]
@@ -441,28 +417,7 @@ def get_sentence_glove(s, LSTM=False, not_contextual=True, seq_len=30):
 
 
 def get_sentence_2d(s, max_len=32):
-    s = s.replace('\'ve', ' \'ve')
-    s = s.replace('\'ll', ' \'ll')
-    s = s.replace('n\'t', ' n\'t')
-    s = s.replace('\'d', ' \'d')
-    s = s.replace('-', ' ')
-    s = s.replace('\'s', ' \'s')
-    modified_s = re.sub('#', '.', s).strip('.').split('.')
-    modified_s = list(filter(None, modified_s))
-    raw_tokens = []
-    for s in modified_s:
-        s = re.sub('speaker[0-9a-z\-\*]*[0-9]', '', s)
-        s = re.sub('[^a-zA-Z0-9- \n\.]', '', s)
-        s = re.sub('n[0-9][0-9a-z]{4,5}', '', s)
-        s = re.sub('[0-9]t[0-9]+', '', s)
-        s = s.replace(' ve ', ' \'ve ')
-        s = s.replace(' ll ', ' \'ll ')
-        s = s.replace(' nt ', ' n\'t ')
-        s = s.replace(' d ', ' \'d ')
-        s = s.replace(' s ', ' \'s ')
-        s = s.replace('doeuvres', 'd\'oeuvres')
-        s = s.replace('mumblex', 'mumble')
-        raw_tokens += split_by_whitespace(s)
+    raw_tokens = preprocess_utterance(s)
     n = len(raw_tokens)
     if (n < max_len):
         lst = [get_word(w.lower()) for w in raw_tokens]
@@ -473,9 +428,8 @@ def get_sentence_2d(s, max_len=32):
     all_embs = torch.stack(lst).permute(1, 0)
     return all_embs, raw_tokens
 
-
-def tokenizer(s, pad_symbol=True, seq_len=None, from_right=True):
-    """If `pad_symbol=True`, pad <bos> at the beginning and <eos> at the end"""
+def preprocess_utterance(s, split_off_clitics=True,max_utterances=None):
+  if split_off_clitics:
     s = s.replace('\'ve', ' \'ve')
     s = s.replace('\'re', ' \'re')
     s = s.replace('\'ll', ' \'ll')
@@ -483,27 +437,40 @@ def tokenizer(s, pad_symbol=True, seq_len=None, from_right=True):
     s = s.replace('\'d', ' \'d')
     s = s.replace('-', ' ')
     s = s.replace('\'s', ' \'s')
-    modified_s = re.sub('#', '.', s).strip('.').split('.')
-    modified_s = list(filter(None, modified_s))
+  modified_s = re.sub('#', '.', s).strip('.').split('.')
+  modified_s = list(filter(None, modified_s))
+  if max_utterances and max_utterances < len(modified_s):
+    modified_s = modified_s[-max_utterances]
+  raw_tokens = []
+  for s in modified_s:
+      s = re.sub('speaker[0-9a-z\-\*]*[0-9]', '', s)
+      s = re.sub('[^a-zA-Z0-9- \n\.]', '', s)
+      s = re.sub('n[0-9][0-9a-z]{4,5}', '', s)
+      s = re.sub('[0-9]t[0-9]+', '', s)
+      s = s.replace(' oclock ', ' o\'clock ')
+      s = s.replace(' ve ', ' \'ve ')
+      s = s.replace(' re ', ' \'re ')
+      s = s.replace(' ll ', ' \'ll ')
+      s = s.replace(' nt ', ' n\'t ')
+      s = s.replace(' d ', ' \'d ')
+      s = s.replace(' s ', ' \'s ')
+      s = s.replace('doeuvres', 'd\'oeuvres')
+      s = s.replace('mumblex', 'mumble')
+      raw_tokens += split_by_whitespace(s)
+  
+  return raw_tokens
+
+
+def tokenizer(s, pad_symbol=True, seq_len=None, from_right=True):
+    """If `pad_symbol=True`, pad <bos> at the beginning and <eos> at the end"""
+    
     if pad_symbol:
         raw_tokens = ['<S>']
     else:
         raw_tokens = []
-    for s in modified_s:
-        s = re.sub('speaker[0-9a-z\-\*]*[0-9]', '', s)
-        s = re.sub('[^a-zA-Z0-9- \n\.]', '', s)
-        s = re.sub('n[0-9][0-9a-z]{4,5}', '', s)
-        s = re.sub('[0-9]t[0-9]+', '', s)
-        s = s.replace(' oclock ', ' o\'clock ')
-        s = s.replace(' ve ', ' \'ve ')
-        s = s.replace(' re ', ' \'re ')
-        s = s.replace(' ll ', ' \'ll ')
-        s = s.replace(' nt ', ' n\'t ')
-        s = s.replace(' d ', ' \'d ')
-        s = s.replace(' s ', ' \'s ')
-        s = s.replace('doeuvres', 'd\'oeuvres')
-        s = s.replace('mumblex', 'mumble')
-        raw_tokens += split_by_whitespace(s)
+        
+    raw_tokens.extend(preprocess_utterance(s))
+    
     if pad_symbol:
         raw_tokens.append('</S>')
     total_len = len(raw_tokens)
@@ -546,7 +513,8 @@ def get_sentence_elmo(s, c, embedder, layer=2, not_contextual=True, LSTM=False, 
 
 # BERT from huggingface models
 def get_sentence_bert(s, bert_tokenizer, bert_model, layer = 11, GPU=False, LSTM=False, max_seq_len=None, is_single=True):
-    s = "[CLS] " + s + " [SEP]" 
+    s = " ".join(preprocess_utterance(s, split_off_clitics = False))
+    s = "[CLS] " + s + " [SEP]"
     tokenized_text = bert_tokenizer.tokenize(s)
     indexed_tokens = bert_tokenizer.convert_tokens_to_ids(tokenized_text)
     segments_ids = [0] * len(indexed_tokens)
@@ -576,7 +544,9 @@ def get_sentence_bert(s, bert_tokenizer, bert_model, layer = 11, GPU=False, LSTM
 
 def get_sentence_bert_context(s, c, bc, bert_tokenizer, bert_model, layer = 11,
                               GPU=False, LSTM=False, max_sentence_len=None, 
-                              max_context_len=None):
+                              max_context_len=None, max_context_utterances=None):
+    s = " ".join(preprocess_utterance(s, split_off_clitics = False))
+    s = " ".join(preprocess_utterance(s, split_off_clitics = False, max_utterances=max_context_utterances))
     s = "[CLS]" + s + " [SEP] " + c + " [SEP]" 
     tokenized_text = bert_tokenizer.tokenize(s)
     indexed_tokens = bert_tokenizer.convert_tokens_to_ids(tokenized_text)

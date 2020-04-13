@@ -34,6 +34,7 @@ cfg.MODE = 'train'
 cfg.PREDICTION_TYPE = 'rating'
 cfg.IS_RANDOM = False
 cfg.SINGLE_SENTENCE = True
+cfg.MAX_CONTEXT_UTTERANCES = -1
 cfg.EXPERIMENT_NAME = ''
 cfg.OUT_PATH = './'
 cfg.GLOVE_DIM = 100
@@ -203,6 +204,8 @@ def main():
     word_embs = []
     word_embs_np = None
     word_embs_stack = None
+    
+    max_context_utterances = cfg.MAX_CONTEXT_UTTERANCES if cfg.MAX_CONTEXT_UTTERANCES > -1 else None
 
     if not cfg.MODE == 'qual':
         if not os.path.isfile(load_db):
@@ -221,6 +224,8 @@ def main():
     # is contextual or not
     if not cfg.SINGLE_SENTENCE:
         NUMPY_DIR += '_contextual'
+    if max_context_utterances:
+        NUMPY_DIR += "_" + str(max_context_utterances) + '_utt'
     # type of pre-trained word embedding
     if cfg.IS_ELMO:
         NUMPY_DIR += '/elmo_' + "layer_" + str(cfg.ELMO_LAYER)
@@ -242,6 +247,8 @@ def main():
     mkdir_p(NUMPY_DIR)
     print(NUMPY_PATH)
     logging.info(f'Path to the current word embeddings: {NUMPY_PATH}')
+
+    
 
     if os.path.isfile(NUMPY_PATH):
         word_embs_np = np.load(NUMPY_PATH)
@@ -311,7 +318,8 @@ def main():
                                                                 GPU=cfg.CUDA,
                                                                 LSTM=cfg.LSTM.FLAG,
                                                                 max_sentence_len=30,
-                                                                max_context_len=120)
+                                                                max_context_len=120,
+                                                                max_context_utterances=max_context_utterances)
                 else:
                     from models import get_sentence_glove
                     curr_emb, l = get_sentence_glove(input_text, LSTM=cfg.LSTM.FLAG,
