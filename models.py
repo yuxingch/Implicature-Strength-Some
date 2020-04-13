@@ -574,24 +574,26 @@ def get_sentence_bert(s, bert_tokenizer, bert_model, layer = 11, GPU=False, LSTM
         bert_mean = torch.mean(bert_output, axis=0)
         return bert_mean, sl
 
-def get_sentence_bert_context(s, c, bc, bert_tokenizer, bert_model, layer = 11,
+def get_sentence_bert_context(s, c, bert_tokenizer, bert_model, layer = 11,
                               GPU=False, LSTM=False, max_sentence_len=None, 
                               max_context_len=None):
     s = "[CLS]" + s + " [SEP] " + c + " [SEP]" 
     tokenized_text = bert_tokenizer.tokenize(s)
     indexed_tokens = bert_tokenizer.convert_tokens_to_ids(tokenized_text)
+    if len(indexed_tokens) > max_sentence_len + max_context_len:
+      indexed_tokens = indexed_tokens[:(max_sentence_len + max_context_len)]
     s_len = tokenized_text.index("[SEP]")
-    segments_ids = [0] * (s_len + 1) + [1] * (len(tokenized_text) - s_len - 1)
+    segments_ids = [0] * (s_len + 1) + [1] * (len(indexed_tokens) - s_len - 1)
     
     tokens_tensor = torch.tensor([indexed_tokens])
     segments_tensors = torch.tensor([segments_ids])
-    bert_output = torch.zeros((1,max_seq_len, bert_model.config.hidden_size))
+    bert_output = torch.zeros((1,max_sentence_len, bert_model.config.hidden_size))
     if GPU:
       tokens_tensor = tokens_tensor.cuda()
-      segments_tensors = tokens_tensor.cuda()
+      segments_tensors = segments_tensors.cuda()
       bert_output = bert_output.cuda()
       
-    sl = min(s_len, max_seq_len)
+    sl = min(s_len, max_sentence_len)
 
     with torch.no_grad():
         outputs = bert_model(tokens_tensor, token_type_ids=segments_tensors)
