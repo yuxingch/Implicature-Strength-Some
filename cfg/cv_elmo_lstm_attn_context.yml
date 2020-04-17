@@ -2,7 +2,7 @@ SOME_DATABASE: './some_database.csv'
 CONFIG_NAME: 'elmo_lstm_attn_context'
 EXPERIMENT_NAME: 'elmo_lstm_attn_context'
 PREDON: 'train'
-SINGLE_SENTENCE: True
+SINGLE_SENTENCE: False
 CUDA: True
 IS_BERT: False
 IS_ELMO: True
@@ -13,7 +13,7 @@ TRAIN:
     TOTAL_EPOCH: 800
     LR_DECAY_EPOCH: 100
     LR_DECAY_RATE: 1.0
-    INTERVAL: 10
+    INTERVAL: 100
     START_EPOCH: 0
     DROPOUT:
         FC_1: 0.2
