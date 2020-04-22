@@ -133,7 +133,7 @@ We release data and code at \url{https://github.com/yuxingch/Implicature-Strengt
 
 \section{The dataset} \label{sec:dataset}
 
-We use the annotated dataset collected by \newcite{degen2015investigating}, a dataset of the utterances from the Switchboard corpus of telephone dialogues \citep{godfrey1992switchboard} with a noun phrase (NP) with \emph{some}.  The dataset consists of 1,362 unique utterances. For each example with a \emph{some}-NP, \newcite{degen2015investigating} collected inference strength ratings from at least 10 participants recruited on Amazon's Mechanical Turk. Participants saw both the target utterance and ten utterances from the preceding discourse context. They then rated the similarity between the original utterance like (\ref{utteranceA}) and an utterance in which \emph{some} was replaced with \emph{some, but not all} like (\ref{utteranceB}), on a 7-point Likert scale with endpoints labeled ``very different meaning'' (1) and ``same meaning'' (7). Low similarity ratings thus indicate low inference strength, and high similarity ratings indicate high inference strength.
+We use the annotated dataset collected by \newcite{degen2015investigating}, a dataset of the utterances from the Switchboard corpus of English telephone dialogues \citep{godfrey1992switchboard} with a noun phrase (NP) with \emph{some}.  The dataset consists of 1,362 unique utterances. For each example with a \emph{some}-NP, \newcite{degen2015investigating} collected inference strength ratings from at least 10 participants recruited on Amazon's Mechanical Turk. Participants saw both the target utterance and ten utterances from the preceding discourse context. They then rated the similarity between the original utterance like (\ref{utteranceA}) and an utterance in which \emph{some} was replaced with \emph{some, but not all} like (\ref{utteranceB}), on a 7-point Likert scale with endpoints labeled ``very different meaning'' (1) and ``same meaning'' (7). Low similarity ratings thus indicate low inference strength, and high similarity ratings indicate high inference strength.
 \vspace{-.2em}
 \begin{exe}
 \small
@@ -351,7 +351,7 @@ Results are shown in the right panel of \figref{fig:avgattn}. The attention weig
 
 In the tuning experiments above, we found that including the preceding conversational context in the input to the model did not improve or  lowered prediction accuracy.\footnote{As suggested by a reviewer, we conducted post-hoc experiments in which we limited the conversational context to the preceding 2 or 5 utterances, which presumably have a higher signal-to-noise ratio than a larger conversational context of 10 preceding utterances. In these experiments, we again found that including the conversational context did not improve model predictions.} At the same time, we found that the model is capable of making accurate predictions in most cases without taking the preceding context into account. Taken together, these results suggest either that the conversational context is not necessary and one can draw inferences from the target utterance alone, or that the model does not make adequate use of the preceding context. 
 
-\citet{degen2015investigating} did not systematically investigate whether the preceding conversational context was used by participants judging inference strength. To assess the extent to which the preceding context in this dataset affects inference strength, we re-ran her experiment, but without presenting participants with the preceding conversational context.\footnote{We recruited 680 participants on Mechanical Turk who each judged 20 or 22 items, yielding 10 judgments per item.} If the context is irrelevant for drawing inferences, then mean inference strength ratings should be very similar across the two experiments, suggesting the model may have rightly learned to not utilize the context. If the presence of context affects inference strength,  ratings should differ across experiments, suggesting that the model's method of integrating context is ill-suited to the task.
+\citet{degen2015investigating} did not systematically investigate whether the preceding conversational context was used by participants judging inference strength. To assess the extent to which the preceding context in this dataset affects inference strength, we re-ran her experiment, but without presenting participants with the preceding conversational context. We recruited 680 participants on Mechanical Turk who each judged 20 or 22 items, yielding 10 judgments per item. If the context is irrelevant for drawing inferences, then mean inference strength ratings should be very similar across the two experiments, suggesting the model may have rightly learned to not utilize the context. If the presence of context affects inference strength,  ratings should differ across experiments, suggesting that the model's method of integrating context is ill-suited to the task.
 
 The new, no-context ratings correlated with the original ratings ($r=0.68$, see Appendix~\ref{app:no-context}) but were overall more concentrated towards the center of the scale, suggesting that in many cases, participants who lacked information about the conversational context were unsure about the strength of the scalar inference. Since the original dataset exhibited more of a bi-modal distribution with fewer ratings at the center of the scale, this suggests that the broader conversational context contains important cues to scalar inferences.
 
@@ -365,7 +365,7 @@ We showed that despite lacking specific pragmatic reasoning abilities, neural ne
 
 In an analysis of the contribution of the conversational context, we found that humans make use of the preceding context whereas the models we considered failed to do so adequately. Considering the importance of context in drawing both scalar and other inferences in communication \cite{Grice1975,clark1992arenas,bonnefon2009some,Zondervan2010,bergengrodner2012,goodman2013knowledge,degen2015wonky}, the development of  appropriate representations of larger context is an exciting avenue for future research. 
 
-We also only considered the supervised setting in which the model was trained to predict inference strength. It would be interesting to investigate how much supervision is necessary and, for example, to what extent a model trained to perform another task such as predicting natural language inferences is able to predict scalar inferences (see \newcite{Jiang2019b} for such an evaluation on predicting speaker commitment). 
+We also only considered the supervised setting in which the model was trained to predict inference strength. It would be interesting to investigate how much supervision is necessary and, for example, to what extent a model trained to perform another task such as predicting natural language inferences is able to predict scalar inferences (see \newcite{Jiang2019b} for such an evaluation of predicting speaker commitment, and \newcite{Jeretic2020} for an evaluation of different NLI models for predicting lexically triggered scalar inferences). 
 
 One further interesting line of research would be to extend this work to other pragmatic inferences. Recent experimental work has shown that inference strength is variable across scale and inference type \citep{doran2012novel, van2016scalar}.  We treated \emph{some} as a case study in this work, but none of our modeling decisions are specific to \emph{some}. It would be straightforward to train similar models for other types of inferences.
 
@@ -373,11 +373,12 @@ Lastly, the fact that the attention weights  provided insights into the model's 
 
 
 \section*{Acknowledgements}
-We gratefully acknowledge Leyla Kursat for collecting the 
-no-context inference strength ratings. We also thank Jesse Mu, Shyamal Buch, 
+We thank the anonymous reviewers for their
+thoughtful feedback. 
+We also gratefully acknowledge Leyla Kursat for collecting the 
+no-context inference strength ratings, and we thank Jesse Mu, Shyamal Buch, 
 Peng Qi, Marie-Catherine de Marneffe, Tal Linzen, and the members of the 
 ALPS lab and the JHU Computational Psycholinguistics group for helpful discussions.
-The first author is supported by a Pigott Scholars Fellowship.
 
 % Jesse Mu, Shyamal Buch, Peng Qi, Marie-Catherine de Marneffe, Stanford NLP group, Tal Linzen, JHU Computatinol Psycholinguistics group, ALPS lab, Leyla Kursat (for collecting the no-context ratings), ...
 
