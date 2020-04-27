@@ -1,3 +1,13 @@
 .DS_Store
 analysis/models
 .RHistory
+.env
+.ipynb_checkpoints
+.vector_cache
+.vscode
+pytorch-text
+__pycache__
+*.ipynb
+some_database.csv
+some_fulldataset.csv
+swbdext.csv

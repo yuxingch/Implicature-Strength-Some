@@ -6,5 +6,6 @@ PyYAML==3.13
 torch==0.4.0
 torchfile==0.1.0
 torchvision==0.2.1
+transformers==2.8.0
 tqdm==4.31.1
 scipy==1.1.0

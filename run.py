@@ -24,7 +24,6 @@ from split_dataset import split_train_test, k_folds_idx
 from utils import mkdir_p
 
 
-
 cfg = edict()
 cfg.SOME_DATABASE = './some_database.csv'
 cfg.CONFIG_NAME = ''
@@ -32,6 +31,8 @@ cfg.RESUME_DIR = ''
 cfg.SEED = 0
 cfg.MODE = 'train'
 cfg.PREDICTION_TYPE = 'rating'
+cfg.MAX_VALUE = 7
+cfg.MIN_VALUE = 1
 cfg.IS_RANDOM = False
 cfg.SINGLE_SENTENCE = True
 cfg.MAX_CONTEXT_UTTERANCES = -1
@@ -62,7 +63,6 @@ cfg.LSTM.LAYERS = 2
 cfg.LSTM.BIDIRECTION = True
 cfg.LSTM.ATTN = False
 
-# Training options
 cfg.TRAIN = edict()
 cfg.TRAIN.FLAG = True
 cfg.TRAIN.BATCH_SIZE = 32
@@ -80,7 +80,6 @@ cfg.TRAIN.DROPOUT = edict()
 cfg.TRAIN.DROPOUT.FC_1 = 0.75
 cfg.TRAIN.DROPOUT.FC_2 = 0.75
 
-# Evaluation options
 cfg.EVAL = edict()
 cfg.EVAL.FLAG = False
 cfg.EVAL.BEST_EPOCH = 100
@@ -90,6 +89,7 @@ NOT_EXIST = torch.FloatTensor(1, GLOVE_DIM).zero_()
 
 
 def merge_yaml(new_cfg, old_cfg):
+    """Help merge configuration file"""
     for k, v in new_cfg.items():
         # check type
         old_type = type(old_cfg[k])
@@ -110,18 +110,32 @@ def merge_yaml(new_cfg, old_cfg):
 
 
 def cfg_setup(filename):
+    """Update values of the parameters based on configuration file"""
     with open(filename, 'r') as f:
         new_cfg = edict(yaml.load(f))
     merge_yaml(new_cfg, cfg)
 
 
-def load_dataset(input0, input1, input2, t):
-    input_df0 = pd.read_csv(input0, sep='\t')
-    input_df1 = pd.read_csv(input1, sep=',')
-    input_df2 = pd.read_csv(input2, sep='\t')
+def load_dataset(database, target_dataset, context_data, pred_type):
+    """Load datasets and build dictionaries for mean rating, target utterance and discourse context
+    
+    Arguments:
+    database -- "./some_database.csv"
+    target_dataset -- data set after splitting. (training/test)
+    context_data -- "./swbdext.csv", which includes discourse context for each example
+    pred_type -- prediction type, either "rating" or "strength"
+    
+    Return:
+    dict_item_mean_score -- key: ItemID, value: (float) mean rating score
+    dict_item_sentence -- key: ItemID, value: (str) target utterance
+    dict_item_paragraph -- key: ItemID, value: (str) preceding discourse context
+    """
+    input_df0 = pd.read_csv(database, sep='\t')
+    input_df1 = pd.read_csv(target_dataset, sep=',')
+    input_df2 = pd.read_csv(context_data, sep='\t')
     dict_item_sentence_raw = input_df0[['Item', 'Sentence']].drop_duplicates().groupby('Item')['Sentence'].apply(list).to_dict()
     dict_item_paragraph_raw = input_df2[['Item_ID', '20-b']].groupby('Item_ID')['20-b'].apply(list).to_dict()
-    if t == 'strength':
+    if pred_type == 'strength':
         dict_item_mean_score_raw = input_df1[['Item', 'StrengthSome']].groupby('Item')['StrengthSome'].apply(list).to_dict()
     else:
         dict_item_mean_score_raw = input_df1[['Item', 'Rating']].groupby('Item')['Rating'].apply(list).to_dict()
@@ -136,6 +150,7 @@ def load_dataset(input0, input1, input2, t):
 
 
 def random_input(num_examples):
+    """Generate random values to construct fake embeddings"""
     res = []
     for i in range(num_examples):
         lst = []
@@ -146,13 +161,18 @@ def random_input(num_examples):
 
 
 def main():
+    ##################
+    # Initialization #
+    ##################
     parser = argparse.ArgumentParser(
         description='Run ...')
-    parser.add_argument('--conf', dest='config_file', default="unspecified")
+    parser.add_argument('--conf', dest='config_file', default='unspecified')
     parser.add_argument('--out_path', dest='out_path', default=None)
+    parser.add_argument('--data_path', dest='data_path', default='./datasets')
     opt = parser.parse_args()
     print(opt)
 
+    # update parameters based on config file if provided
     if opt.config_file is not "unspecified":
         cfg_setup(opt.config_file)
         if not cfg.MODE == 'train':
@@ -165,26 +185,34 @@ def main():
 
     logging.basicConfig(level=logging.INFO)
 
-    # random seed
+    # set random seed
     random.seed(cfg.SEED)
     torch.manual_seed(cfg.SEED)
     if cfg.CUDA:
         torch.cuda.manual_seed_all(cfg.SEED)
 
-    curr_path = "./datasets/seed_" + str(cfg.SEED)
+    curr_path = opt.data_path + "/seed_" + str(cfg.SEED)
     if cfg.SPLIT_NAME != "":
-      curr_path = os.path.join(curr_path, cfg.SPLIT_NAME)
+        curr_path = os.path.join(curr_path, cfg.SPLIT_NAME)
+
+    # we'd like to give each experiment run a name
     if cfg.EXPERIMENT_NAME == "":
         cfg.EXPERIMENT_NAME = datetime.now().strftime('%m_%d_%H_%M')
+
+    # set up the path to write our log
     log_path = os.path.join(cfg.OUT_PATH, cfg.EXPERIMENT_NAME, "Logging")
     mkdir_p(log_path)
     file_handler = logging.FileHandler(os.path.join(log_path, cfg.MODE + "_log.txt"))
     logging.getLogger().addHandler(file_handler)
     logging.getLogger().setLevel(logging.INFO)
+
     logging.info('Using configurations:')
     logging.info(pprint.pformat(cfg))
     logging.info(f'Using random seed {cfg.SEED}.')
 
+    ################
+    # Load dataset #
+    ################
     if cfg.MODE == 'qual':
         load_db = "./datasets/qualitative.txt"
         cfg.PREDON = 'qual'
@@ -195,20 +223,9 @@ def main():
     elif cfg.MODE == 'all':
         load_db = curr_path + "/all_db.csv"
 
-    curr_max = 7
-    curr_min = 1
-    max_diff = curr_max - curr_min
-
-    # obtain pre-trained word vectors
-    sl = []
-    word_embs = []
-    word_embs_np = None
-    word_embs_stack = None
-    
-    max_context_utterances = cfg.MAX_CONTEXT_UTTERANCES if cfg.MAX_CONTEXT_UTTERANCES > -1 else None
-
     if not cfg.MODE == 'qual':
         if not os.path.isfile(load_db):
+            # construct training/test sets if currently not available
             split_train_test(cfg.SEED, curr_path)
         labels, target_utterances, contexts = load_dataset(cfg.SOME_DATABASE,
                                                            load_db,
@@ -220,12 +237,36 @@ def main():
         with open(load_db, "r") as qual_file:
             sentences = [x.strip() for x in qual_file.readlines()]
 
-    NUMPY_DIR = './datasets/seed_' + str(cfg.SEED)
+    #  normalize the label values [cfg.MIN_VALUE,cfg.MAX_VALUE] --> [0,1]
+    original_labels = []
+    normalized_labels = []
+    keys = []
+    max_diff = cfg.MAX_VALUE - cfg.MIN_VALUE
+    if not cfg.MODE == 'qual':
+        for (k, v) in labels.items():
+            keys.append(k)
+            original_labels.append(float(v))
+            labels[k] = (float(v) - cfg.MIN_VALUE) / max_diff
+            normalized_labels.append(labels[k])
+    
+    ###################################
+    # obtain pre-trained word vectors #
+    ###################################
+    sen_len = []
+    word_embs = []
+    word_embs_np = None
+    word_embs_stack = None
+    
+    max_context_utterances = cfg.MAX_CONTEXT_UTTERANCES if cfg.MAX_CONTEXT_UTTERANCES > -1 else None
+    
+    NUMPY_DIR = opt.data_path + '/seed_' + str(cfg.SEED)
     # is contextual or not
     if not cfg.SINGLE_SENTENCE:
         NUMPY_DIR += '_contextual'
+    # if limit the number of utterances in context
     if max_context_utterances:
         NUMPY_DIR += "_" + str(max_context_utterances) + '_utt'
+
     # type of pre-trained word embedding
     if cfg.IS_ELMO:
         NUMPY_DIR += '/elmo_' + "layer_" + str(cfg.ELMO_LAYER)
@@ -236,7 +277,8 @@ def main():
         NUMPY_DIR += "layer_" + str(cfg.BERT_LAYER)
     else:  # default: GloVe
         NUMPY_DIR += '/glove'
-    # Avg/LSTM
+
+    # use LSTM or avg to get sentence-level embedding
     if cfg.LSTM.FLAG:
         NUMPY_DIR += '_lstm'
         NUMPY_PATH = NUMPY_DIR + '/embs_' + cfg.PREDON + '_' + format(cfg.LSTM.SEQ_LEN) + '.npy'
@@ -248,18 +290,18 @@ def main():
     print(NUMPY_PATH)
     logging.info(f'Path to the current word embeddings: {NUMPY_PATH}')
 
-    
-
+    # avoid redundant work if we've generated embeddings already (in previous runs)
     if os.path.isfile(NUMPY_PATH):
         word_embs_np = np.load(NUMPY_PATH)
         len_np = np.load(LENGTH_PATH)
-        sl = len_np.tolist()
+        sen_len = len_np.tolist()
         word_embs_stack = torch.from_numpy(word_embs_np)
     else:
+        # Generate and save ELMo/BERT/GloVe word-level embeddings
         if cfg.IS_ELMO:
             ELMO_EMBEDDER = ElmoEmbedder()
         if cfg.IS_BERT:
-            from pytorch_transformers import BertTokenizer, BertModel
+            from transformers import BertTokenizer, BertModel
             bert_model = 'bert-large-uncased' if cfg.BERT_LARGE else 'bert-base-uncased'
             bert_tokenizer = BertTokenizer.from_pretrained(bert_model)
             bert_model = BertModel.from_pretrained(bert_model, output_hidden_states=True)
@@ -278,7 +320,7 @@ def main():
                                                 LSTM=cfg.LSTM.FLAG,
                                                 max_seq_len=cfg.LSTM.SEQ_LEN,
                                                 is_single=cfg.SINGLE_SENTENCE)
-                sl.append(l)
+                sen_len.append(l)
                 word_embs.append(curr_emb)
         else:
             for (k, v) in tqdm(target_utterances.items(), total=len(target_utterances)):
@@ -325,33 +367,24 @@ def main():
                     curr_emb, l = get_sentence_glove(input_text, LSTM=cfg.LSTM.FLAG,
                                                      not_contextual=cfg.SINGLE_SENTENCE,
                                                      seq_len=cfg.LSTM.SEQ_LEN)
-                sl.append(l)
+                sen_len.append(l)
                 word_embs.append(curr_emb)
-        np.save(LENGTH_PATH, np.array(sl))
+        np.save(LENGTH_PATH, np.array(sen_len))
         word_embs_stack = torch.stack(word_embs)
         np.save(NUMPY_PATH, word_embs_stack.numpy())
 
-    #  normalize the values [1,7] --> [0,1], if training/testing/non-qualitative evaluation
-    original_labels = []
-    normalized_labels = []
-    keys = []
-    if not cfg.MODE == 'qual':
-        for (k, v) in labels.items():
-            keys.append(k)
-            original_labels.append(float(v))
-            labels[k] = (float(v) - curr_min) / max_diff
-            normalized_labels.append(labels[k])
-    # cfg.BATCH_ITEM_NUM = math.ceil(len(normalized_labels)/float(cfg.TRAIN.BATCH_SIZE))
-
-    #  If want to experiment with random embeddings:
+    #  If want to experiment with random-value embeddings
     fake_embs = None
     if cfg.IS_RANDOM:
         print("randomized word vectors")
         if cfg.TRAIN.FLAG:
-            fake_embs = random_input(954)
+            fake_embs = random_input(len(labels))
         else:
-            fake_embs = random_input(408)
+            fake_embs = random_input(len(labels))
 
+    ##################
+    # Experiment Run #
+    ##################
     if cfg.TRAIN.FLAG:
         logging.info("Start training\n===============================")
         save_path = cfg.OUT_PATH + cfg.EXPERIMENT_NAME
@@ -365,7 +398,7 @@ def main():
                 cfg.BATCH_ITEM_NUM = len(normalized_labels)//cfg.TRAIN.BATCH_SIZE
                 X["train"], X["val"] = word_embs_stack.float(), None
                 y["train"], y["val"] = np.array(normalized_labels), None
-                L["train"], L["val"] = sl, None
+                L["train"], L["val"] = sen_len, None
                 r_model = RatingModel(cfg, save_path)
                 r_model.train(X, y, L)
             else:
@@ -374,14 +407,14 @@ def main():
                 val_loss_history = np.zeros((cfg.TRAIN.TOTAL_EPOCH, cfg.KFOLDS))
                 val_r_history = np.zeros((cfg.TRAIN.TOTAL_EPOCH, cfg.KFOLDS))
                 normalized_labels = np.array(normalized_labels)
-                sl_np = np.array(sl)
+                sen_len_np = np.array(sen_len)
                 fold_cnt = 1
-                for train_idx, val_idx in k_folds_idx(cfg.KFOLDS, 954, cfg.SEED):
+                for train_idx, val_idx in k_folds_idx(cfg.KFOLDS, len(normalized_labels), cfg.SEED):
                     logging.info(f'Fold #{fold_cnt}\n- - - - - - - - - - - - -')
                     save_sub_path = os.path.join(save_path, format(fold_cnt))
                     X_train, X_val = word_embs_stack[train_idx], word_embs_stack[val_idx]
                     y_train, y_val = normalized_labels[train_idx], normalized_labels[val_idx]
-                    L_train, L_val = sl_np[train_idx].tolist(), sl_np[val_idx].tolist()
+                    L_train, L_val = sen_len_np[train_idx].tolist(), sen_len_np[val_idx].tolist()
                     X["train"], X["val"] = X_train, X_val
                     y["train"], y["val"] = y_train, y_val
                     L["train"], L["val"] = L_train, L_val
@@ -407,7 +440,7 @@ def main():
         load_path = os.path.join(best_path, "Model")
         cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(cfg.EVAL.BEST_EPOCH)+ ".pth"
         best_model = RatingModel(cfg, best_path)
-        preds, attn_weights = best_model.evaluate(word_embs_stack.float(), max_diff, curr_min, sl)
+        preds, attn_weights = best_model.evaluate(word_embs_stack.float(), max_diff, cfg.MIN_VALUE, sen_len)
         if cfg.LSTM.ATTN:
             attn_path = os.path.join(best_path, "Attention")
             mkdir_p(attn_path)
@@ -442,8 +475,8 @@ def main():
             for epoch in epoch_lst:
                 cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+".pth"
                 eval_model = RatingModel(cfg, eval_path)
-                preds = eval_model.evaluate(fake_embs, max_diff, curr_min, sl)
-        else:
+                preds = eval_model.evaluate(fake_embs, max_diff, cfg.MIN_VALUE, sen_len)
+        else:   # testing
             load_path = os.path.join(eval_path, "Model")
             max_epoch_dir = None
             max_value = -1.0
@@ -452,7 +485,7 @@ def main():
             for epoch in epoch_lst:
                 cfg.RESUME_DIR = load_path + "/RNet_epoch_" + format(epoch)+ ".pth"
                 eval_model = RatingModel(cfg, eval_path)
-                preds, attn_weights = eval_model.evaluate(word_embs_stack.float(), max_diff, curr_min, sl)
+                preds, attn_weights = eval_model.evaluate(word_embs_stack.float(), max_diff, cfg.MIN_VALUE, sen_len)
 
                 if cfg.LSTM.ATTN:
                     attn_path = os.path.join(eval_path, "Attention")

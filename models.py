@@ -37,8 +37,6 @@ GLOVE_DIM = 100
 ELMO_DIM = 1024
 glove = vocab.GloVe(name='6B', dim=GLOVE_DIM)
 
-IMG_DIR = "/Users/yuxing/Desktop/Stanford/Academic/2018-2019/Spring2019/temp/"
-
 torch.manual_seed(1)
 
 _UNK = torch.randn(GLOVE_DIM,)
@@ -50,14 +48,6 @@ _EOS = torch.randn(GLOVE_DIM,)
 def build_state_dict(config_net):
     """Build dictionary to store the state of our neural net"""
     return torch.load(config_net, map_location=lambda storage, loc: storage)['state_dict']
-
-
-# get rid of tensorflow dependency
-#def write_summary(value, tag, summary_writer, global_step):
-#    """Write a single summary value to tensorboard"""
-#    summary = tf.Summary()
-#    summary.value.add(tag=tag, simple_value=value)
-#    summary_writer.add_summary(summary, global_step)
 
 
 class RatingModel(object):
@@ -73,11 +63,8 @@ class RatingModel(object):
         if self.cfg.TRAIN.FLAG:
             self.model_dir = os.path.join(output_dir, 'Model')
             self.best_model_dir = os.path.join(output_dir, 'Best Model')
-            self.log_dir = os.path.join(output_dir, 'Log')
             mkdir_p(self.model_dir)
             mkdir_p(self.best_model_dir)
-            mkdir_p(self.log_dir)
-            #self.summary_writer = tf.summary.FileWriter(self.log_dir)
 
         self.batch_size = self.cfg.TRAIN.BATCH_SIZE
         self.total_epoch = self.cfg.TRAIN.TOTAL_EPOCH
@@ -203,9 +190,6 @@ class RatingModel(object):
                     X_batch = X_batch.cuda()
                     y_batch = y_batch.cuda()
 
-                # real_seq_len = seq_lengths.copy()
-                # seq_lengths[0] = self.cfg.LSTM.SEQ_LEN
-                # output_scores = self.RNet(X_batch_tensor)
                 if self.cfg.LSTM.FLAG:
                     pack = pack_padded_sequence(X_batch, seq_lengths,
                                                 batch_first=True)
@@ -218,13 +202,10 @@ class RatingModel(object):
                 loss.backward()
 
                 clip_grad_value_(self.RNet.parameters(), 2)
-                # plot_grad_flow(self.RNet.named_parameters(), count)
-                # plot_grad_flow_v0(self.RNet.named_parameters(), count)
                 optimizer.step()
 
                 count += 1
                 if count % 3 == 0 or count == 1:
-                    # write_summary(loss, 'loss', self.summary_writer, count)
                     count_loss.append((count, loss))
             end_t = time.time()
 
@@ -250,13 +231,9 @@ class RatingModel(object):
                          f' val r: {val_r:.4f}; time: {(end_t-start_t):.2f}sec')
 
             if epoch % self.interval == 0 or epoch == 1:
-                #for (a, b) in count_loss:
-                #    write_summary(b, 'loss', self.summary_writer, a)
                 count_loss = []
                 save_model(self.RNet, epoch, self.model_dir)
         # save checkpoint for the last epoch
-        #for (a, b) in count_loss:
-        #    write_summary(b, 'loss', self.summary_writer, a)
         save_model(self.RNet, self.total_epoch, self.model_dir)
         logging.info(f'Best epoch {self.best_val_epoch} with val_r = {self.best_val_r:.4f}.')
 
@@ -293,7 +270,7 @@ class RatingModel(object):
                 else:
                     output_scores, _ = self.RNet(X_batch)
 
-                loss = self.loss_func(output_scores, y_batch)
+                loss = self.loss_func(output_scores.squeeze(), y_batch)
                 total_val_loss += loss.item()
 
                 output_scores = output_scores.data.tolist()
@@ -304,7 +281,7 @@ class RatingModel(object):
                     temp_rating[s] = output_scores[cnt][0]
                     cnt += 1
                 for curr_score in temp_rating:
-                    y_preds_lst.append(curr_score*6 + 1)
+                    y_preds_lst.append(curr_score*(self.cfg.MAX_VALUE - self.cfg.MIN_VALUE) + self.cfg.MIN_VALUE)
         y_val = y_val[val_inds]
         val_coeff = np.corrcoef(np.array(y_preds_lst), np.array(y_val))[0, 1]
         return total_val_loss, val_coeff
@@ -316,6 +293,7 @@ class RatingModel(object):
         X -- vector representations for all examples
         max_diff -- for normalization
         min_value -- for normalization
+        sl -- length of the sequence
         """
         self.load_network()
         self.RNet.eval()
@@ -376,6 +354,9 @@ class RatingModel(object):
         return np.array(rating_lst), all_attn
 
 
+#####################################
+# Helper functions for word vectors #
+#####################################
 def get_word(w):
     try:
         result = glove.vectors[glove.stoi[w]]
@@ -415,18 +396,6 @@ def get_sentence_glove(s, LSTM=False, not_contextual=True, seq_len=30):
     expected_embedding_tensor = torch.from_numpy(expected_embedding_padded)
     return expected_embedding_tensor, sl
 
-
-def get_sentence_2d(s, max_len=32):
-    raw_tokens = preprocess_utterance(s)
-    n = len(raw_tokens)
-    if (n < max_len):
-        lst = [get_word(w.lower()) for w in raw_tokens]
-        lst += [_PAD] * (max_len - n)
-    else:
-        raw_tokens = raw_tokens[:max_len]
-        lst = [get_word(w.lower()) for w in raw_tokens]
-    all_embs = torch.stack(lst).permute(1, 0)
-    return all_embs, raw_tokens
 
 def preprocess_utterance(s, split_off_clitics=True,max_utterances=None):
   if split_off_clitics:
@@ -579,42 +548,6 @@ def get_sentence_bert_context(s, c, bert_tokenizer, bert_model, layer = 11,
         bert_mean = torch.mean(bert_output, axis=0)
         return bert_mean, sl
 
-# BERT
-def get_sentence_bert_service(s, bc, LSTM=False, max_seq_len=None, is_single=True):
-    # first tokenize the sentence
-    # tokens = tokenizer(s, pad_symbol=False, seq_len=max_seq_len, from_right=is_single)
-    # bc.encode() will return a ndarray
-    # bert_output = bc.encode([tokens], is_tokenized=True)[0]  # (1, max_seq_len, 768)
-    bert_output = bc.encode([s])[0]
-    bert_output = bert_output[:max_seq_len, :]
-    bert_output = bert_output.squeeze()  # (max_seq_len, 768)
-    # sl = len(tokens) + 2
-    sl = max_seq_len
-    if np.where(bert_output==0)[0].shape[0]:
-        sl = np.where(bert_output==0)[0][0] + 1
-    assert sl <= max_seq_len
-    if LSTM:
-        return torch.from_numpy(bert_output), sl
-    else:
-        bert_mean = np.mean(bert_output, axis=0)
-        return torch.from_numpy(bert_mean), sl
-
-
-def get_sentence_bert_context_service(s, c, bc, LSTM=False, max_sentence_len=None, max_context_len=None):
-    bert_input = s + " ||| " + c
-    bert_output = bc.encode([bert_input])
-    bert_output = bert_output.squeeze()
-    bert_output = bert_output[:max_sentence_len, :]
-    sl = max_sentence_len
-    if np.where(bert_output==0)[0].shape[0]:
-        sl = np.where(bert_output==0)[0][0] + 1
-    assert sl <= max_sentence_len
-    if LSTM:
-        return torch.from_numpy(bert_output), sl
-    else:
-        bert_mean = np.mean(bert_output, axis=0)
-        return torch.from_numpy(bert_mean), sl
-
 
 def padded(emb, seq_len):
     sentence_len, dim = emb.shape  # sentence_len = actual_sentence_len + 2
@@ -625,6 +558,7 @@ def padded(emb, seq_len):
         result[-1, :] = emb[-1, :]  # <eos>
     else:
         result[:sentence_len, :] = emb[:sentence_len, :]
+        # If want to use random values instead of zero, un-comment the line below:
         # result[sentence_len:, :] = np.random.rand((seq_len - sentence_len), dim)
         result[sentence_len:, :] = 0
         l = sentence_len
@@ -645,62 +579,8 @@ def context_padded(emb, seq_len):
     return result, l
 
 
-def plot_grad_flow(named_parameters, global_step):
-    '''Plots the gradients flowing through different layers in the net during training.
-    Can be used for checking for possible gradient vanishing / exploding problems.
-
-    Usage: Plug this function in Trainer class after loss.backwards() as 
-    "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow'''
-    ave_grads = []
-    max_grads = []
-    layers = []
-    print('------------\n', global_step)
-    for n, p in named_parameters:
-        if(p.requires_grad) and ("bias" not in n):
-            layers.append(n)
-            ave_grads.append(p.grad.abs().mean())
-            max_grads.append(p.grad.abs().max())
-            print(n, ': ', p.grad.abs().max())
-    plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
-    plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
-    plt.hlines(0, 0, len(ave_grads)+1, lw=2, color="k" )
-    plt.xticks(range(0,len(ave_grads), 1), layers, rotation="vertical")
-    plt.xlim(left=0, right=len(ave_grads))
-    plt.ylim(bottom = -0.001, top=0.02) # zoom in on the lower gradient regions
-    plt.xlabel("Layers")
-    plt.ylabel("average gradient")
-    plt.title("Gradient flow at step " + format(global_step))
-    plt.grid(True)
-    plt.legend([mlines.Line2D([0], [0], color="c", lw=4),
-                mlines.Line2D([0], [0], color="b", lw=4),
-                mlines.Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
-    plt.savefig(IMG_DIR + format(global_step), bbox_inches='tight')
-    plt.close()
-
-
-def plot_grad_flow_v0(named_parameters, count):
-    ave_grads = []
-    layers = []
-    for n, p in named_parameters:
-        if(p.requires_grad) and ("bias" not in n):
-            layers.append(n)
-            ave_grads.append(p.grad.abs().mean())
-    plt.plot(ave_grads, alpha=0.3, color="b")
-    plt.hlines(0, 0, len(ave_grads)+1, linewidth=1, color="k" )
-    plt.xticks(range(0,len(ave_grads), 1), layers, rotation="vertical")
-    plt.xlim(xmin=0, xmax=len(ave_grads))
-    plt.xlabel("Layers")
-    plt.ylabel("average gradient")
-    plt.title("Gradient flow")
-    plt.grid(True)
-    print("plotting gradient flow at step " + format(count))
-    if count == 27:
-        plt.savefig(IMG_DIR + "epoch0_" + format(count), bbox_inches='tight')
-        plt.close()
-
-
 def main():
-    result = get_sentence("Good Morning!")
+    result, _ = get_sentence_glove("This is a dummy test utterance.")
     print(result)
 
 if __name__ == "__main__":
