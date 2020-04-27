@@ -2,7 +2,7 @@ easydict==1.9
 matplotlib==3.0.3
 numpy==1.16.2
 pandas==0.24.1
-PyYAML==3.13
+PyYAML==5.1
 torch==0.4.0
 torchfile==0.1.0
 torchvision==0.2.1
