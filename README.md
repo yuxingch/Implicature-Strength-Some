@@ -16,16 +16,17 @@ sudo pip install virtualenv        # You will need to do this only once
 virtualenv -p python3 .env         # Creates a virtual environment with python3
 source .env/bin/activate           # Activate the virtual environment
 pip install -r requirements.txt    # Install all the dependencies
-pip install allennlp               # Need to manually install allennlp
 deactivate                         # Exit the virtual environment when you're done
 ```
-Save `some_database.csv`, `some_fulldataset.csv`, and `swbdext.csv` in this directory as well:
+Save `some_database.csv`, `some_fulldataset.csv`, and `swbdext.csv` in `./corpus_data/` directory:
 ```
 - Implicature-Strength-Some
-    - ...
-    - some_database.csv
-    - some_fulldataset.csv
-    - swbdext.csv
+    - code
+        - ...
+    - corpus_data
+        - some_database.csv
+        - some_fulldataset.csv
+        - swbdext.csv
 ```
 
 # Run Experiments
@@ -34,14 +35,14 @@ We don't have to run this separately. In the latest version, this has already be
 
 Splitting data into training/test sets directly (by default 70%/30%):
 ```
-python split_dataset.py --seed=SEED_NUM --path=SAVE/PATH  --ratio=SPLIT_RATIO  --file=PATH/TO/CORPUS --verbose
+python ./code/split_dataset.py --seed=SEED_NUM --path=SAVE/PATH  --ratio=SPLIT_RATIO  --file=PATH/TO/CORPUS --verbose
 ```
 
 Or, can use the default setting by running:
 ```
-python split_dataset.py
+python ./code/split_dataset.py
 ```
-Then the path to the training set will be `./datasets/train_db.csv` and the path to the test set will be `./datasets/test_db.csv`.
+Then the path to the training set will be `./datasets/train_db.csv` and the path to the test set will be `./datasets/test_db.csv`. We also have a `./datasets/all_db.csv` that combines the previous two files.
 
 Sample output with default settings (if verbose):
 ```
@@ -53,7 +54,7 @@ Out of total 1362 entries, 954 will be in training set and 408 will be in test s
 =====================
 ```
 
-In actual runs, based on the implementation in `run.py`, the path will be `./{data_path}/seed_{cfg.SEED}/train_db.csv`/`./{data_path}/seed_{cfg.SEED}/test_db.csv`
+In actual runs, based on the implementation in `run.py`, the path will be `./{data_path}/seed_{cfg.SEED}/{train/test/all}_db.csv`
 
 ## Configuration File
 In `./cfg/`, there are example configuration files (e.g. `./cfg/cv_elmo_lstm_attn_context.yml`)
@@ -124,13 +125,15 @@ We can use the command-line argument to specify the path to the configuration fi
 ## Start training
 To use new parameters coming from the configuration file (e.g. `./cfg/cv_elmo_lstm_attn_context.yml`), first make sure the file is in `./cfg/`. Then use this line to run the script:
 ```
-python run.py --conf='./cfg/cv_elmo_lstm_attn_context.yml'
+python ./code/run.py --conf='./cfg/cv_elmo_lstm_attn_context.yml'
 ```
 The outputs will be stored in this hierachy (some examples):
 ```
 - Implicature_Strength_Some
     - bert_lstm_attn
         - ...
+    - code
+    - corpus_data
     - datasets
         - seed_0
             - bert_layer_11_lstm

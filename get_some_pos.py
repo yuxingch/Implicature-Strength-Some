@@ -1,6 +1,6 @@
 import os
 from tqdm import tqdm
-from pytorch_transformers import BertTokenizer
+from transformers import BertTokenizer
 
 
 bert_model = 'bert-large-uncased'

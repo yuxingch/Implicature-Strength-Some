@@ -11,7 +11,7 @@ from sklearn.model_selection import KFold
 from utils import mkdir_p
 
 
-def split_train_test(seed_num, save_path, ratio=0.7, input='./some_fulldataset.csv',
+def split_train_test(seed_num, save_path, ratio=0.7, input='./corpus_data/some_fulldataset.csv',
                      verbose=True):
     """Split the corpus into training and test sets with a given split ratio
 
@@ -64,16 +64,21 @@ def split_train_test(seed_num, save_path, ratio=0.7, input='./some_fulldataset.c
     test_ids = ids[train_num_examples:]
     mkdir_p(save_path)
 
+    f_all = open(save_path + '/all_db.csv', 'w')
     f = open(save_path + '/train_db.csv', 'w')
     head_line = "Item,StrengthSome,Rating,Partitive,Modification,Subjecthood\n"
+    f_all.write(head_line)
     f.write(head_line)
     for i in train_ids:
+        f_all.write(list_new_value[i]+"\n")
         f.write(list_new_value[i]+"\n")
     f.close()
     f = open(save_path + '/test_db.csv', 'w')
     f.write(head_line)
     for i in test_ids:
+        f_all.write(list_new_value[i]+"\n")
         f.write(list_new_value[i]+"\n")
+    f_all.close()
     f.close()
     return
 

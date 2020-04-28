@@ -1,4 +1,4 @@
-SOME_DATABASE: './some_database.csv'
+SOME_DATABASE: './corpus_data/some_database.csv'
 CONFIG_NAME: 'glove_lstm_attn_context'
 EXPERIMENT_NAME: 'glove_lstm_attn_context'
 SINGLE_SENTENCE: False

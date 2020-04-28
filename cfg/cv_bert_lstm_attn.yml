@@ -1,4 +1,4 @@
-SOME_DATABASE: './some_database.csv'
+SOME_DATABASE: './corpus_data/some_database.csv'
 CONFIG_NAME: 'bert_lstm_attn'
 EXPERIMENT_NAME: 'bert_lstm_attn'
 PREDON: 'train'

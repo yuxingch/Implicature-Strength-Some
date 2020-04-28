@@ -25,7 +25,7 @@ from utils import mkdir_p
 
 
 cfg = edict()
-cfg.SOME_DATABASE = './some_database.csv'
+cfg.SOME_DATABASE = './corpus_data/some_database.csv'
 cfg.CONFIG_NAME = ''
 cfg.RESUME_DIR = ''
 cfg.SEED = 0
@@ -229,7 +229,7 @@ def main():
             split_train_test(cfg.SEED, curr_path)
         labels, target_utterances, contexts = load_dataset(cfg.SOME_DATABASE,
                                                            load_db,
-                                                           "./swbdext.csv",
+                                                           "./corpus_data/swbdext.csv",
                                                            cfg.PREDICTION_TYPE)
     else:
         if not os.path.isfile(load_db):
