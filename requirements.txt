@@ -1,6 +1,6 @@
 easydict==1.9
 matplotlib==3.0.3
-numpy==1.16.2
+numpy==1.22.0
 pandas==0.24.1
 pytz==2017.3
 PyYAML==5.1
